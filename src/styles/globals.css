@@ -1,0 +1,221 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   LifeQuest — Cyber Neon Design System
+   Violet électrique + Cyan sur fond dark
+   ============================================================ */
+
+@theme {
+  /* Backgrounds */
+  --color-bg-base: #07080f;
+  --color-bg-elevated: #0e1020;
+  --color-bg-card: #14172b;
+  --color-bg-card-hover: #1b1f3a;
+
+  /* Neon primaries */
+  --color-neon-violet: #a855f7;
+  --color-neon-violet-glow: #c084fc;
+  --color-neon-cyan: #06b6d4;
+  --color-neon-cyan-glow: #22d3ee;
+  --color-neon-pink: #ec4899;
+
+  /* Text */
+  --color-text-primary: #f1f5ff;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Difficulty palette — Fortnite-style rarity */
+  --color-difficulty-easy: #22c55e;
+  --color-difficulty-medium: #3b82f6;
+  --color-difficulty-hard: #a855f7;
+  --color-difficulty-expert: #f97316;
+  --color-difficulty-legendary: #ef4444;
+
+  /* Borders */
+  --color-border-default: #1e2244;
+  --color-border-bright: #2a3060;
+
+  /* Fonts */
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), 'Orbitron', sans-serif;
+}
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+html {
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(168, 85, 247, 0.18), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 110%, rgba(6, 182, 212, 0.12), transparent),
+    var(--color-bg-base);
+  background-attachment: fixed;
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ============================================================
+   Visible focus ring for keyboard users
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--color-neon-cyan);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Selection
+   ============================================================ */
+::selection {
+  background: var(--color-neon-violet);
+  color: white;
+}
+
+/* ============================================================
+   Scrollbar (subtle, neon)
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-neon-violet), var(--color-neon-cyan));
+  border-radius: 5px;
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 20px currentColor, 0 0 40px currentColor; opacity: 0.95; }
+  50% { box-shadow: 0 0 30px currentColor, 0 0 60px currentColor; opacity: 1; }
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px currentColor); }
+  50% { filter: drop-shadow(0 0 16px currentColor) drop-shadow(0 0 24px currentColor); }
+}
+
+.animate-neon-pulse { animation: neon-pulse 2.4s ease-in-out infinite; }
+.animate-scan { animation: scan 3s linear infinite; }
+.animate-glow { animation: glow-pulse 2s ease-in-out infinite; }
+
+/* ============================================================
+   Utility classes
+   ============================================================ */
+
+/* Glowing neon text */
+.text-glow-violet {
+  color: var(--color-neon-violet-glow);
+  text-shadow: 0 0 12px rgba(168, 85, 247, 0.6), 0 0 24px rgba(168, 85, 247, 0.3);
+}
+
+.text-glow-cyan {
+  color: var(--color-neon-cyan-glow);
+  text-shadow: 0 0 12px rgba(6, 182, 212, 0.6), 0 0 24px rgba(6, 182, 212, 0.3);
+}
+
+/* Cards with subtle border glow */
+.card-neon {
+  background: linear-gradient(180deg, var(--color-bg-card), var(--color-bg-elevated));
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-neon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), transparent 40%, rgba(6, 182, 212, 0.3));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Difficulty borders */
+.border-difficulty-easy { border-color: var(--color-difficulty-easy); box-shadow: 0 0 18px rgba(34, 197, 94, 0.35); }
+.border-difficulty-medium { border-color: var(--color-difficulty-medium); box-shadow: 0 0 18px rgba(59, 130, 246, 0.35); }
+.border-difficulty-hard { border-color: var(--color-difficulty-hard); box-shadow: 0 0 18px rgba(168, 85, 247, 0.35); }
+.border-difficulty-expert { border-color: var(--color-difficulty-expert); box-shadow: 0 0 18px rgba(249, 115, 22, 0.35); }
+.border-difficulty-legendary { border-color: var(--color-difficulty-legendary); box-shadow: 0 0 18px rgba(239, 68, 68, 0.45); }
+
+/* Holographic shimmer button */
+.btn-neon {
+  position: relative;
+  background: linear-gradient(90deg, var(--color-neon-violet), var(--color-neon-cyan), var(--color-neon-violet));
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
+  color: white;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+.btn-neon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 32px rgba(168, 85, 247, 0.8);
+}
+
+.btn-neon:active {
+  transform: translateY(0);
+}
+
+/* Subtle grid background overlay */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(168, 85, 247, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Screen-reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

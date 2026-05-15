@@ -1,0 +1,85 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { ArrowLeft, User, Trophy, Target } from 'lucide-react';
+
+export async function generateMetadata({ params }: { params: Promise<{ pseudo: string }> }) {
+  const { pseudo } = await params;
+  return { title: `Profil de ${pseudo}` };
+}
+
+export default async function PublicPlayerProfilePage({
+  params,
+}: {
+  params: Promise<{ pseudo: string }>;
+}) {
+  const { pseudo } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, pseudo, avatar_url, level, xp, created_at')
+    .eq('pseudo', pseudo)
+    .single();
+
+  if (!profile) notFound();
+
+  const { count: completedQuests } = await supabase
+    .from('user_quests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('status', 'completed');
+
+  const { count: trophyCount } = await supabase
+    .from('user_trophies')
+    .select('trophy_id', { count: 'exact', head: true })
+    .eq('user_id', profile.id);
+
+  return (
+    <div className="mx-auto max-w-3xl px-6 py-10">
+      <Link
+        href="/game/profile"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]"
+      >
+        <ArrowLeft className="h-4 w-4" /> Retour à mon profil
+      </Link>
+
+      <div className="card-neon p-8 text-center">
+        <div className="mb-4 inline-flex h-24 w-24 items-center justify-center rounded-full border-2 border-[color:var(--color-neon-violet)] bg-[color:var(--color-bg-elevated)] text-glow-violet">
+          {profile.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            <User className="h-12 w-12" />
+          )}
+        </div>
+
+        <h1 className="font-display text-2xl font-black">{profile.pseudo}</h1>
+        <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+          Aventurier depuis le {new Date(profile.created_at).toLocaleDateString('fr-FR')}
+        </p>
+
+        <div className="mt-8 grid grid-cols-3 gap-4">
+          <Stat label="Niveau" value={profile.level} />
+          <Stat label="XP" value={profile.xp} />
+          <Stat label="Quêtes finies" value={completedQuests ?? 0} />
+        </div>
+
+        <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[color:var(--color-bg-elevated)] px-4 py-2 text-sm">
+          <Trophy className="h-4 w-4 text-glow-violet" />
+          <span className="font-display font-bold">{trophyCount ?? 0}</span>
+          <span className="text-[color:var(--color-text-muted)]">trophées</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="font-display text-2xl font-black text-glow-cyan">{value}</p>
+      <p className="text-xs uppercase tracking-widest text-[color:var(--color-text-muted)]">{label}</p>
+    </div>
+  );
+}
