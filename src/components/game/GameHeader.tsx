@@ -24,7 +24,7 @@ export function GameHeader({ profile }: { profile: Profile }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[color:var(--color-border-default)] bg-[color:var(--color-bg-base)]/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
         <Link href="/game" className="font-display text-xl font-black text-glow-violet">
           LIFEQUEST

@@ -13,7 +13,7 @@ export default async function CustomizePage() {
 
   const { data: settings } = await supabase
     .from('user_settings')
-    .select('background_url, background_type, theme')
+    .select('background_url, background_type, background_blur_px, adaptive_theme_enabled, accent_color')
     .eq('user_id', user!.id)
     .single();
 
@@ -33,6 +33,9 @@ export default async function CustomizePage() {
       <CustomizationForm
         initialBackgroundUrl={settings?.background_url ?? ''}
         initialBackgroundType={settings?.background_type ?? null}
+        initialBlurPx={settings?.background_blur_px ?? 16}
+        initialAdaptiveTheme={settings?.adaptive_theme_enabled ?? false}
+        initialAccentColor={settings?.accent_color ?? null}
       />
     </div>
   );

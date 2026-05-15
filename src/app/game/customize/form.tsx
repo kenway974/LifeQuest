@@ -1,92 +1,372 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { extractAccentColor, deriveSecondary } from '@/lib/theme/extract-accent';
 
 interface Props {
   initialBackgroundUrl: string;
   initialBackgroundType: 'image' | 'gif' | 'video' | null;
+  initialBlurPx: number;
+  initialAdaptiveTheme: boolean;
+  initialAccentColor: string | null;
 }
 
-export function CustomizationForm({ initialBackgroundUrl, initialBackgroundType }: Props) {
-  const [url, setUrl] = useState(initialBackgroundUrl);
-  const [type, setType] = useState<Props['initialBackgroundType']>(initialBackgroundType);
-  const [saving, setSaving] = useState(false);
+const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_SECONDS = 15;
+const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm';
+
+function detectType(mime: string): 'image' | 'gif' | 'video' | null {
+  if (mime === 'image/gif') return 'gif';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('image/')) return 'image';
+  return null;
+}
+
+function probeVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    const cleanup = () => URL.revokeObjectURL(url);
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      cleanup();
+      if (!Number.isFinite(duration) || duration <= 0) {
+        reject(new Error('Durée illisible'));
+      } else {
+        resolve(duration);
+      }
+    };
+    video.onerror = () => {
+      cleanup();
+      reject(new Error('Impossible de lire la vidéo'));
+    };
+    video.src = url;
+  });
+}
+
+export function CustomizationForm({
+  initialBackgroundUrl,
+  initialBackgroundType,
+  initialBlurPx,
+  initialAdaptiveTheme,
+  initialAccentColor,
+}: Props) {
+  const [previewUrl, setPreviewUrl] = useState(initialBackgroundUrl);
+  const [previewType, setPreviewType] = useState<Props['initialBackgroundType']>(initialBackgroundType);
+  const [file, setFile] = useState<File | null>(null);
+  const [blurPx, setBlurPx] = useState(initialBlurPx);
+  const [adaptive, setAdaptive] = useState(initialAdaptiveTheme);
+  const [accent, setAccent] = useState<string | null>(initialAccentColor);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
+
+  function rejectFile(msg: string) {
+    setMessage(msg);
+    setFile(null);
+    if (inputRef.current) inputRef.current.value = '';
+  }
+
+  async function handleFile(picked: File | null) {
+    setMessage(null);
+    if (!picked) {
+      setFile(null);
+      return;
+    }
+    if (picked.size > MAX_BYTES) {
+      rejectFile(`Fichier trop lourd : ${(picked.size / 1024 / 1024).toFixed(1)} Mo (max ${MAX_BYTES / 1024 / 1024} Mo).`);
+      return;
+    }
+    const type = detectType(picked.type);
+    if (!type) {
+      rejectFile('Format non supporté. Utilise JPG, PNG, WebP, GIF, MP4 ou WebM.');
+      return;
+    }
+
+    if (type === 'video') {
+      let duration: number;
+      try {
+        duration = await probeVideoDuration(picked);
+      } catch (err) {
+        rejectFile(err instanceof Error ? err.message : 'Vidéo invalide.');
+        return;
+      }
+      if (duration > MAX_VIDEO_SECONDS) {
+        rejectFile(
+          `Vidéo trop longue : ${duration.toFixed(1)} s (max ${MAX_VIDEO_SECONDS} s). Coupe ta vidéo et réessaie.`,
+        );
+        return;
+      }
+    }
+
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const local = URL.createObjectURL(picked);
+    objectUrlRef.current = local;
+    setFile(picked);
+    setPreviewUrl(local);
+    setPreviewType(type);
+
+    try {
+      const extracted = await extractAccentColor(picked);
+      if (extracted) setAccent(extracted);
+    } catch {
+      // extraction is best-effort; keep the previous accent
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
+    setBusy(true);
     setMessage(null);
 
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setBusy(false);
+      setMessage('Tu dois être connecté.');
+      return;
+    }
+
+    let publicUrl = previewUrl.startsWith('blob:') ? '' : previewUrl;
+    let typeToSave = previewType;
+
+    if (file) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'bin';
+      const path = `${user.id}/background-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('user-backgrounds')
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) {
+        setBusy(false);
+        setMessage(`Erreur upload : ${uploadError.message}`);
+        return;
+      }
+      const { data: pub } = supabase.storage.from('user-backgrounds').getPublicUrl(path);
+      publicUrl = pub.publicUrl;
+      typeToSave = detectType(file.type)!;
+    }
 
     const { error } = await supabase
       .from('user_settings')
       .update({
-        background_url: url || null,
-        background_type: type,
+        background_url: publicUrl || null,
+        background_type: typeToSave,
+        background_blur_px: blurPx,
+        adaptive_theme_enabled: adaptive,
+        accent_color: accent,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', user.id);
 
-    setSaving(false);
-    setMessage(error ? 'Erreur lors de la sauvegarde' : '✓ Personnalisation sauvegardée');
+    setBusy(false);
+    if (error) {
+      setMessage(`Erreur sauvegarde : ${error.message}`);
+      return;
+    }
+    if (file) {
+      setFile(null);
+      setPreviewUrl(publicUrl);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+    setMessage('✓ Personnalisation sauvegardée — recharge la page pour voir le rendu complet.');
   }
 
+  async function handleRemove() {
+    setBusy(true);
+    setMessage(null);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setBusy(false);
+      return;
+    }
+    const { error } = await supabase
+      .from('user_settings')
+      .update({
+        background_url: null,
+        background_type: null,
+        accent_color: null,
+        adaptive_theme_enabled: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id);
+
+    setBusy(false);
+    if (error) {
+      setMessage(`Erreur : ${error.message}`);
+      return;
+    }
+    setPreviewUrl('');
+    setPreviewType(null);
+    setFile(null);
+    setAccent(null);
+    setAdaptive(false);
+    if (inputRef.current) inputRef.current.value = '';
+    setMessage('✓ Fond retiré');
+  }
+
+  const hasPreview = Boolean(previewUrl);
+  const secondary = accent ? deriveSecondary(accent) : null;
+
   return (
-    <form onSubmit={handleSubmit} className="card-neon space-y-5 p-6">
+    <form onSubmit={handleSubmit} className="card-neon space-y-6 p-6">
       <div>
-        <label htmlFor="bg-url" className="mb-1.5 block text-sm font-medium">
-          URL de ton fond (image, GIF ou vidéo)
+        <label htmlFor="bg-file" className="mb-1.5 block text-sm font-medium">
+          Importer ton fond (image, GIF ou vidéo)
         </label>
         <input
-          id="bg-url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://…"
-          className="w-full rounded-md border border-[color:var(--color-border-bright)] bg-[color:var(--color-bg-elevated)] px-4 py-2.5 text-sm focus:border-[color:var(--color-neon-cyan)] focus:outline-none"
+          ref={inputRef}
+          id="bg-file"
+          type="file"
+          accept={ACCEPT}
+          onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-sm text-[color:var(--color-text-secondary)] file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-[color:var(--color-bg-elevated)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[color:var(--color-text-primary)] hover:file:bg-[color:var(--color-bg-card-hover)]"
         />
         <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-          Astuce : héberge ton média sur Supabase Storage, Imgur, Cloudinary…
+          Formats : JPG, PNG, WebP, GIF, MP4, WebM — max 10 Mo. Vidéos : 15 s maximum (boucle).
         </p>
       </div>
 
+      {hasPreview && (
+        <div>
+          <p className="mb-1.5 text-sm font-medium">Aperçu</p>
+          <div className="relative h-48 overflow-hidden rounded-md border border-[color:var(--color-border-default)] bg-[color:var(--color-bg-elevated)]">
+            {previewType === 'video' ? (
+              <video
+                src={previewUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ filter: `blur(${blurPx}px) saturate(1.1)`, transform: 'scale(1.15)' }}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewUrl}
+                alt="Aperçu du fond"
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ filter: `blur(${blurPx}px) saturate(1.1)`, transform: 'scale(1.15)' }}
+              />
+            )}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(7,8,15,0.55) 0%, rgba(7,8,15,0.75) 100%)',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div>
-        <label htmlFor="bg-type" className="mb-1.5 block text-sm font-medium">
-          Type de média
+        <label htmlFor="blur" className="mb-1.5 flex items-center justify-between text-sm font-medium">
+          <span>Intensité du flou</span>
+          <span className="text-xs text-[color:var(--color-text-muted)]">{blurPx} px</span>
         </label>
-        <select
-          id="bg-type"
-          value={type ?? ''}
-          onChange={(e) =>
-            setType((e.target.value || null) as 'image' | 'gif' | 'video' | null)
-          }
-          className="w-full rounded-md border border-[color:var(--color-border-bright)] bg-[color:var(--color-bg-elevated)] px-4 py-2.5 text-sm focus:border-[color:var(--color-neon-cyan)] focus:outline-none"
-        >
-          <option value="">— Aucun (par défaut)</option>
-          <option value="image">Image</option>
-          <option value="gif">GIF</option>
-          <option value="video">Vidéo</option>
-        </select>
+        <input
+          id="blur"
+          type="range"
+          min={0}
+          max={48}
+          step={1}
+          value={blurPx}
+          onChange={(e) => setBlurPx(Number(e.target.value))}
+          className="w-full accent-[color:var(--color-neon-cyan)]"
+        />
       </div>
 
-      {/* TODO: add file upload to Supabase Storage bucket "user-backgrounds" */}
+      <div className="space-y-3 rounded-md border border-[color:var(--color-border-default)] p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={adaptive}
+            onChange={(e) => setAdaptive(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[color:var(--color-neon-violet)]"
+          />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Adapter les couleurs du site à mon image</p>
+            <p className="text-xs text-[color:var(--color-text-muted)]">
+              La couleur dominante de ton fond remplace le violet/cyan néon de l'interface.
+            </p>
+          </div>
+        </label>
 
-      <button type="submit" disabled={saving} className="btn-neon rounded-md px-6 py-2.5 text-sm disabled:opacity-60">
-        {saving ? 'Sauvegarde…' : 'Sauvegarder'}
-      </button>
+        {adaptive && accent && secondary && (
+          <div className="flex items-center gap-3 pl-7">
+            <Swatch color={accent} label="Primaire" />
+            <Swatch color={secondary} label="Secondaire (auto)" />
+          </div>
+        )}
+        {adaptive && !accent && (
+          <p className="pl-7 text-xs text-[color:var(--color-text-muted)]">
+            Importe une image colorée pour activer l'adaptation.
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={busy}
+          className="btn-neon rounded-md px-6 py-2.5 text-sm disabled:opacity-60"
+        >
+          {busy ? 'Envoi…' : 'Enregistrer'}
+        </button>
+        {initialBackgroundUrl && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={busy}
+            className="rounded-md border border-[color:var(--color-border-bright)] px-6 py-2.5 text-sm hover:bg-[color:var(--color-bg-card-hover)] disabled:opacity-60"
+          >
+            Retirer le fond
+          </button>
+        )}
+      </div>
 
       {message && (
-        <p role="status" className="text-sm text-glow-cyan">
+        <p
+          role={message.startsWith('✓') ? 'status' : 'alert'}
+          className={
+            message.startsWith('✓')
+              ? 'text-sm text-glow-cyan'
+              : 'rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200'
+          }
+        >
           {message}
         </p>
       )}
     </form>
+  );
+}
+
+function Swatch({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="inline-block h-6 w-6 rounded-full border border-[color:var(--color-border-bright)]"
+        style={{ background: color }}
+      />
+      <span className="text-xs text-[color:var(--color-text-secondary)]">
+        {label} <span className="font-mono">{color}</span>
+      </span>
+    </div>
   );
 }

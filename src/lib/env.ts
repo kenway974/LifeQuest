@@ -24,7 +24,24 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const emptyToUndef = (v: string | undefined) => (v === '' ? undefined : v);
+
+const rawEnv = {
+  NEXT_PUBLIC_SITE_URL: emptyToUndef(process.env.NEXT_PUBLIC_SITE_URL),
+  NEXT_PUBLIC_SUPABASE_URL: emptyToUndef(process.env.NEXT_PUBLIC_SUPABASE_URL),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: emptyToUndef(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: emptyToUndef(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY),
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: emptyToUndef(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
+  SUPABASE_SERVICE_ROLE_KEY: emptyToUndef(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  STRIPE_SECRET_KEY: emptyToUndef(process.env.STRIPE_SECRET_KEY),
+  STRIPE_WEBHOOK_SECRET: emptyToUndef(process.env.STRIPE_WEBHOOK_SECRET),
+  STRIPE_CUSTOM_QUESTS_PRICE_ID: emptyToUndef(process.env.STRIPE_CUSTOM_QUESTS_PRICE_ID),
+  VAPID_PRIVATE_KEY: emptyToUndef(process.env.VAPID_PRIVATE_KEY),
+  VAPID_SUBJECT: emptyToUndef(process.env.VAPID_SUBJECT),
+  NODE_ENV: process.env.NODE_ENV,
+};
+
+const parsed = envSchema.safeParse(rawEnv);
 
 if (!parsed.success) {
   console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors);
