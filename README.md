@@ -259,3 +259,5 @@ MIT — voir [LICENSE](./LICENSE).
 ---
 
 Made with ⚡ and ✨ for adventurers who refuse the default difficulty.
+#   L i f e Q u e s t  
+ 
