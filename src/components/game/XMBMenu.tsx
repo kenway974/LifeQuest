@@ -14,6 +14,7 @@ import {
   Palette,
   Settings,
   PlayCircle,
+  Wand2,
 } from 'lucide-react';
 
 export interface ActiveQuestSummary {
@@ -55,6 +56,13 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
     });
   }
   adventureItems.push(
+    {
+      id: 'discover',
+      label: 'Trouver ta quête',
+      description: 'Pas sûr de quoi commencer ? 4 questions, 3 suggestions sur-mesure.',
+      href: '/game/quests/discover',
+      icon: Wand2,
+    },
     {
       id: 'main',
       label: 'Quêtes principales',
