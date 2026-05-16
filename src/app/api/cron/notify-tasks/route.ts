@@ -1,15 +1,18 @@
 /**
  * Cron endpoint — fires task reminders.
  *
- * Should be called once per hour (e.g. Vercel Cron at "0 * * * *").
- * For each user whose `user_settings.notification_hour` equals the current UTC hour,
- * builds the list of tasks due TODAY (scheduled occurrence today, not yet done)
- * and sends a single web-push aggregating them.
+ * Vercel Hobby plan = 1 daily cron max. We run once a day (default 8h UTC).
+ * For each user with notifications enabled, builds the list of tasks due TODAY
+ * (scheduled occurrence today, not yet done) and sends a single aggregated
+ * web-push.
  *
- * Security: bearer-token gated via env.CRON_SECRET. Set the same secret in
- *   - .env.local (for local testing with curl)
- *   - Vercel Project → Settings → Environment Variables → CRON_SECRET
- *   - vercel.json crons headers will inject it automatically.
+ * Personal `notification_hour` from user_settings is IGNORED in the Hobby
+ * model — there's only one run per day. To honour per-user hours, either:
+ *  - upgrade Vercel to Pro and switch the cron back to "0 * * * *", then
+ *    re-enable the .eq('notification_hour', currentHourUtc) filter below;
+ *  - or use an external scheduler (cron-job.org) hitting this endpoint hourly.
+ *
+ * Security: bearer-token gated via env.CRON_SECRET.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -56,18 +59,18 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const currentHourUtc = now.getUTCHours();
 
-  // 1. Users whose notification hour matches now and who opted in
+  // Daily fan-out (Hobby plan). To restore per-user-hour filtering, re-add:
+  //   .eq('notification_hour', currentHourUtc)
   const { data: users, error: usersErr } = await supabase
     .from('user_settings')
     .select('user_id, notification_hour')
-    .eq('notifications_enabled', true)
-    .eq('notification_hour', currentHourUtc);
+    .eq('notifications_enabled', true);
 
   if (usersErr) {
     return NextResponse.json({ error: usersErr.message }, { status: 500 });
   }
   if (!users || users.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, reason: 'no users this hour' });
+    return NextResponse.json({ ok: true, sent: 0, reason: 'no opted-in users' });
   }
 
   let sent = 0;
@@ -128,7 +131,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    hour: currentHourUtc,
+    runHourUtc: currentHourUtc,
     candidates: users.length,
     sent,
     skipped,
