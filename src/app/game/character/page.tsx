@@ -45,7 +45,7 @@ export default async function CharacterPage() {
       {!profile.stats_initialized ? (
         <CharacterQuestionnaire />
       ) : (
-        <SheetWithData userId={user.id} baseline={profile.baseline_stats} />
+        <SheetWithData userId={user.id} baseline={profile.baseline_stats as Record<string, number> | null} />
       )}
     </div>
   );

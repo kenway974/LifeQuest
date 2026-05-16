@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ArrowLeft } from 'lucide-react';
 import { CustomQuestEditor } from './editor';
+import type { StatImpactMap } from '@/lib/character-stats-meta';
 
 export const metadata = { title: 'Éditer la quête' };
 
@@ -35,10 +36,11 @@ export default async function EditCustomQuestPage({
     notFound();
   }
 
-  // Sort children
+  // Sort children + cast Json columns to their narrower domain types
   const sortedObjectives = (quest.objectives ?? [])
     .map((o) => ({
       ...o,
+      stat_impacts: (o.stat_impacts as StatImpactMap | null) ?? {},
       tasks: (o.tasks ?? []).sort((a, b) => a.order_index - b.order_index),
     }))
     .sort((a, b) => a.order_index - b.order_index);
