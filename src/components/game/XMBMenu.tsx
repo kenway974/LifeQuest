@@ -347,47 +347,103 @@ export function XMBMenu({ activeQuest }: { activeQuest: ActiveQuestSummary | nul
 }
 
 function MobileGrid({ categories }: { categories: XMBCategory[] }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const active = categories[activeIdx] ?? categories[0];
+
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8 space-y-8">
-      {categories.map((cat) => {
-        const CatIcon = cat.icon;
-        return (
-          <section key={cat.id}>
-            <h2 className="mb-3 flex items-center gap-2 font-display text-xs uppercase tracking-widest text-[color:var(--color-text-muted)]">
-              <CatIcon className="h-4 w-4" />
-              {cat.label}
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {cat.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className="card-neon flex items-center gap-3 p-4 transition-transform active:scale-[0.98]"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-cyan">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display font-bold">{item.label}</p>
-                      <p className="truncate text-xs text-[color:var(--color-text-muted)]">{item.description}</p>
-                      {item.progressPct !== undefined && (
-                        <div className="mt-2 h-1 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
-                          <div
-                            className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
-                            style={{ width: `${item.progressPct}%` }}
-                          />
-                        </div>
-                      )}
+    <>
+      {/* Content area — full screen above the bottom nav.
+          pb-28 leaves room for the fixed nav + iOS home-indicator. */}
+      <div className="mx-auto max-w-3xl px-4 pb-28 pt-4">
+        <header className="mb-4 flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[color:var(--color-bg-elevated)] text-glow-violet">
+            <active.icon className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="font-display text-xl font-black uppercase tracking-wider">{active.label}</p>
+            <p className="text-xs text-[color:var(--color-text-muted)]">
+              {active.items.length} option{active.items.length > 1 ? 's' : ''}
+            </p>
+          </div>
+        </header>
+
+        <div className="space-y-3">
+          {active.items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="card-neon flex items-center gap-4 p-4 transition-transform active:scale-[0.98]"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-cyan">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-base font-bold">{item.label}</p>
+                  <p className="text-xs text-[color:var(--color-text-muted)]">{item.description}</p>
+                  {item.progressPct !== undefined && (
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
+                      <div
+                        className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
+                        style={{ width: `${item.progressPct}%` }}
+                      />
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
-    </div>
+                  )}
+                </div>
+                <span className="font-display text-xs uppercase tracking-widest text-[color:var(--color-neon-cyan)]">
+                  ›
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom navigation — Clash-Royale-style fixed tab bar */}
+      <nav
+        aria-label="Catégories"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-bg-base)]/85 backdrop-blur-lg"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <ul className="mx-auto flex max-w-3xl items-stretch justify-around">
+          {categories.map((cat, i) => {
+            const isActive = i === activeIdx;
+            const Icon = cat.icon;
+            return (
+              <li key={cat.id} className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveIdx(i)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`relative flex w-full flex-col items-center gap-1 px-2 py-2.5 transition-colors ${
+                    isActive
+                      ? 'text-[color:var(--color-text-primary)]'
+                      : 'text-[color:var(--color-text-muted)]'
+                  }`}
+                >
+                  {isActive && (
+                    <span
+                      className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <Icon
+                    className={`h-6 w-6 transition-transform ${isActive ? 'scale-110 text-glow-violet' : ''}`}
+                  />
+                  <span
+                    className={`text-[10px] font-display uppercase tracking-widest ${
+                      isActive ? 'opacity-100' : 'opacity-70'
+                    }`}
+                  >
+                    {cat.label}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }
