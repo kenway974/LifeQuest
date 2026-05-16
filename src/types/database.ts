@@ -21,6 +21,7 @@ export type Database = {
           id: string
           order_index: number
           quest_id: string
+          stat_impacts: Json
           title: string
           xp_reward: number
         }
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           order_index?: number
           quest_id: string
+          stat_impacts?: Json
           title: string
           xp_reward?: number
         }
@@ -39,6 +41,7 @@ export type Database = {
           id?: string
           order_index?: number
           quest_id?: string
+          stat_impacts?: Json
           title?: string
           xp_reward?: number
         }
@@ -55,31 +58,46 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          baseline_stats: Json
+          cached_stats: Json
+          cached_stats_at: string | null
           created_at: string
           has_custom_quests: boolean
           id: string
           level: number
           pseudo: string
+          stats_initialized: boolean
+          stats_public: boolean
           updated_at: string
           xp: number
         }
         Insert: {
           avatar_url?: string | null
+          baseline_stats?: Json
+          cached_stats?: Json
+          cached_stats_at?: string | null
           created_at?: string
           has_custom_quests?: boolean
           id: string
           level?: number
           pseudo: string
+          stats_initialized?: boolean
+          stats_public?: boolean
           updated_at?: string
           xp?: number
         }
         Update: {
           avatar_url?: string | null
+          baseline_stats?: Json
+          cached_stats?: Json
+          cached_stats_at?: string | null
           created_at?: string
           has_custom_quests?: boolean
           id?: string
           level?: number
           pseudo?: string
+          stats_initialized?: boolean
+          stats_public?: boolean
           updated_at?: string
           xp?: number
         }

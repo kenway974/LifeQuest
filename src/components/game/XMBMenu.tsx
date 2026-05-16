@@ -15,6 +15,7 @@ import {
   Settings,
   PlayCircle,
   Wand2,
+  Activity,
 } from 'lucide-react';
 
 export interface ActiveQuestSummary {
@@ -93,6 +94,13 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
       label: 'Progression',
       icon: BarChart3,
       items: [
+        {
+          id: 'character',
+          label: 'Caractéristiques',
+          description: 'Ta fiche perso RPG : 9 stats qui évoluent avec tes accomplissements.',
+          href: '/game/character',
+          icon: Activity,
+        },
         {
           id: 'stats',
           label: 'Statistiques',

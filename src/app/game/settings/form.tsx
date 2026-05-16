@@ -7,11 +7,17 @@ import { env } from '@/lib/env';
 interface Props {
   initialNotificationsEnabled: boolean;
   initialNotificationHour: number;
+  initialStatsPublic: boolean;
 }
 
-export function SettingsForm({ initialNotificationsEnabled, initialNotificationHour }: Props) {
+export function SettingsForm({
+  initialNotificationsEnabled,
+  initialNotificationHour,
+  initialStatsPublic,
+}: Props) {
   const [enabled, setEnabled] = useState(initialNotificationsEnabled);
   const [hour, setHour] = useState(initialNotificationHour);
+  const [statsPublic, setStatsPublic] = useState(initialStatsPublic);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -26,16 +32,23 @@ export function SettingsForm({ initialNotificationsEnabled, initialNotificationH
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
-      .from('user_settings')
-      .update({
-        notifications_enabled: enabled,
-        notification_hour: hour,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
+    const [{ error: settingsErr }, { error: profileErr }] = await Promise.all([
+      supabase
+        .from('user_settings')
+        .update({
+          notifications_enabled: enabled,
+          notification_hour: hour,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id),
+      supabase
+        .from('profiles')
+        .update({ stats_public: statsPublic, updated_at: new Date().toISOString() })
+        .eq('id', user.id),
+    ]);
 
     setSaving(false);
+    const error = settingsErr || profileErr;
     setMessage(error ? 'Erreur lors de la sauvegarde' : '✓ Paramètres sauvegardés');
   }
 
@@ -105,6 +118,24 @@ export function SettingsForm({ initialNotificationsEnabled, initialNotificationH
           className="w-32 rounded-md border border-[color:var(--color-border-bright)] bg-[color:var(--color-bg-elevated)] px-4 py-2.5 text-sm disabled:opacity-50 focus:border-[color:var(--color-neon-cyan)] focus:outline-none"
         />
         <span className="ml-2 text-sm text-[color:var(--color-text-muted)]">h (0–23)</span>
+      </div>
+
+      <div className="border-t border-[color:var(--color-border-default)] pt-5">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={statsPublic}
+            onChange={(e) => setStatsPublic(e.target.checked)}
+            className="mt-0.5 h-5 w-5 accent-[color:var(--color-neon-violet)]"
+          />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Rendre mes caractéristiques publiques</p>
+            <p className="mt-0.5 text-xs text-[color:var(--color-text-muted)]">
+              Les autres joueurs verront ton radar de stats (sans ton journal personnel ni ta baseline) en
+              recherchant ton pseudo. Désactivable à tout moment.
+            </p>
+          </div>
+        </label>
       </div>
 
       <div className="flex flex-wrap gap-3">

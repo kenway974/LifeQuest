@@ -17,6 +17,12 @@ export default async function SettingsPage() {
     .eq('user_id', user!.id)
     .single();
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('stats_public')
+    .eq('id', user!.id)
+    .single();
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <Link
@@ -31,6 +37,7 @@ export default async function SettingsPage() {
       <SettingsForm
         initialNotificationsEnabled={settings?.notifications_enabled ?? true}
         initialNotificationHour={settings?.notification_hour ?? 9}
+        initialStatsPublic={profile?.stats_public ?? false}
       />
     </div>
   );

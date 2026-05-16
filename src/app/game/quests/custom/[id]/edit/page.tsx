@@ -24,7 +24,7 @@ export default async function EditCustomQuestPage({
       id, title, description, difficulty, duration_days, xp_reward,
       created_by, is_published, type,
       objectives (
-        id, title, description, xp_reward, order_index,
+        id, title, description, xp_reward, order_index, stat_impacts,
         tasks (id, title, description, xp_reward, frequency_days, order_index)
       )
     `)

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { frequencyLabel } from '@/lib/quests';
+import { STAT_DEFS, type StatKey } from '@/lib/character-stats';
+import type { StatImpactMap } from '@/lib/character-stats-meta';
 import {
   createObjectiveAction,
   createTaskAction,
@@ -33,6 +35,7 @@ interface Objective {
   description: string | null;
   xp_reward: number;
   order_index: number;
+  stat_impacts: StatImpactMap | null;
   tasks: Task[];
 }
 
@@ -91,6 +94,7 @@ export function CustomQuestEditor({ quest, objectives }: Props) {
                   title: `Nouvel objectif ${objectives.length + 1}`,
                   description: null,
                   xp_reward: 50,
+                  stat_impacts: {},
                 }),
               )
             }
@@ -266,11 +270,28 @@ function ObjectiveCard({
   const [description, setDescription] = useState(objective.description ?? '');
   const [xp, setXp] = useState(objective.xp_reward);
   const [expanded, setExpanded] = useState(true);
+  const [impacts, setImpacts] = useState<StatImpactMap>(objective.stat_impacts ?? {});
 
+  const impactsKey = JSON.stringify(impacts);
+  const initialImpactsKey = JSON.stringify(objective.stat_impacts ?? {});
   const hasChanges =
     title !== objective.title ||
     (description ?? '') !== (objective.description ?? '') ||
-    xp !== objective.xp_reward;
+    xp !== objective.xp_reward ||
+    impactsKey !== initialImpactsKey;
+
+  function toggleStat(key: StatKey) {
+    setImpacts((cur) => {
+      const next = { ...cur };
+      if (key in next) delete next[key];
+      else next[key] = 3;
+      return next;
+    });
+  }
+
+  function setStatValue(key: StatKey, value: number) {
+    setImpacts((cur) => ({ ...cur, [key]: value }));
+  }
 
   return (
     <article className="card-neon p-5">
@@ -327,6 +348,7 @@ function ObjectiveCard({
                     title,
                     description: description.trim() || null,
                     xp_reward: xp,
+                    stat_impacts: impacts,
                   }),
                 )
               }
@@ -346,6 +368,64 @@ function ObjectiveCard({
             >
               <Trash2 className="h-3.5 w-3.5" /> Supprimer
             </button>
+          </div>
+
+          {/* Stat impacts */}
+          <div className="rounded-md border border-[color:var(--color-border-default)] p-3">
+            <h4 className="mb-2 text-xs uppercase tracking-widest text-[color:var(--color-text-muted)]">
+              Caractéristiques développées
+            </h4>
+            <p className="mb-3 text-xs text-[color:var(--color-text-muted)]">
+              Coche les stats que cet objectif fait progresser (et de combien quand tu l&rsquo;accomplis). Une tâche ratée dégrade ces mêmes stats.
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {STAT_DEFS.map((s) => {
+                const v = impacts[s.key];
+                const active = v !== undefined;
+                const Icon = s.icon;
+                return (
+                  <div
+                    key={s.key}
+                    className={`rounded-md border p-2 transition ${
+                      active
+                        ? 'border-[color:var(--color-neon-cyan)] bg-[color:var(--color-bg-card-hover)]'
+                        : 'border-[color:var(--color-border-default)] bg-[color:var(--color-bg-elevated)]/40 hover:border-[color:var(--color-neon-cyan)]/40'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleStat(s.key)}
+                      className="flex w-full items-center gap-2 text-left"
+                    >
+                      <span
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded"
+                        style={{ background: `${s.color}1f`, color: s.color }}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1 truncate text-xs font-semibold">{s.label}</span>
+                      {active && (
+                        <span className="font-mono text-xs" style={{ color: s.color }}>
+                          +{v}
+                        </span>
+                      )}
+                    </button>
+                    {active && (
+                      <input
+                        type="range"
+                        min={1}
+                        max={10}
+                        step={1}
+                        value={v}
+                        onChange={(e) => setStatValue(s.key, Number(e.target.value))}
+                        className="mt-2 w-full"
+                        style={{ accentColor: s.color }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Tasks */}

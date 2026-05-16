@@ -15,11 +15,27 @@ const QuestSchema = z.object({
   duration_days: z.number().int().min(1).max(365),
 });
 
+const StatKeyEnum = z.enum([
+  'force',
+  'cardio',
+  'endurance',
+  'focus',
+  'discipline',
+  'calme',
+  'emotion',
+  'creativite',
+  'social',
+]);
+const StatImpactsSchema = z
+  .record(StatKeyEnum, z.number().int().min(0).max(20))
+  .default({});
+
 const ObjectiveSchema = z.object({
   questId: z.string().uuid(),
   title: z.string().min(3).max(120),
   description: z.string().max(500).optional().nullable(),
   xp_reward: z.number().int().min(0).max(10_000).default(50),
+  stat_impacts: StatImpactsSchema,
 });
 
 const ObjectiveUpdateSchema = ObjectiveSchema.extend({
@@ -138,6 +154,7 @@ export async function createObjectiveAction(input: z.infer<typeof ObjectiveSchem
     description: parsed.data.description ?? null,
     xp_reward: parsed.data.xp_reward,
     order_index: count ?? 0,
+    stat_impacts: parsed.data.stat_impacts,
   });
 
   if (error) return { error: "Création de l'objectif impossible" };
@@ -159,6 +176,7 @@ export async function updateObjectiveAction(input: z.infer<typeof ObjectiveUpdat
       title: parsed.data.title,
       description: parsed.data.description ?? null,
       xp_reward: parsed.data.xp_reward,
+      stat_impacts: parsed.data.stat_impacts,
     })
     .eq('id', parsed.data.objectiveId)
     .eq('quest_id', parsed.data.questId);

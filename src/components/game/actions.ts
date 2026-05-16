@@ -149,6 +149,7 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   await checkTrophyUnlocks(supabase, user.id, { newLevel, leveledUp });
 
   revalidatePath('/game');
+  revalidatePath('/game/character');
   revalidatePath(`/game/quest/${userQuestId}`);
 
   return {
