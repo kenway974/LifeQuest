@@ -3,14 +3,22 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { levelFromXp } from '@/lib/utils';
+import {
+  aggregateObjective,
+  aggregateQuest,
+  computeTaskProgress,
+  type TaskFrequency,
+} from '@/lib/quests';
 
 /**
  * Complete a task for today.
- * - Logs the completion in user_tasks (unique constraint prevents double-counting)
- * - Awards XP to the user (atomically via RPC-style update)
- * - Recomputes player level
- * - Updates quest progress %
- * - Checks for trophy unlocks
+ * Rules (fixed schedule + 1-day grace):
+ *  - The task must have at least one "active" occurrence today (scheduled or in grace).
+ *  - The user can only validate once per task per day (DB unique constraint).
+ *  - Validation is greedily assigned to the earliest active occurrence.
+ *  - XP for the task is awarded.
+ *  - If the validation completes the parent objective → bonus XP.
+ *  - If the validation completes the quest → bonus XP, status flips to 'completed'.
  */
 export async function completeTaskAction(userQuestId: string, taskId: string) {
   const supabase = await createClient();
@@ -19,85 +27,211 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Non authentifié' };
 
-  // Verify the task belongs to the active user_quest
+  // 1. Fetch task + parent objective + parent quest
   const { data: task } = await supabase
     .from('tasks')
-    .select('id, xp_reward, objective_id, objectives!inner(quest_id)')
+    .select(`
+      id, xp_reward, frequency_days, objective_id,
+      objective:objectives!inner (
+        id, xp_reward, quest_id,
+        quest:quests!inner ( id, duration_days, xp_reward )
+      )
+    `)
     .eq('id', taskId)
     .single();
 
   if (!task) return { error: 'Tâche introuvable' };
+  const objective = task.objective;
+  const quest = objective.quest;
 
-  // Insert the completion (unique constraint handles duplicates)
+  // 2. Verify the user_quest matches
+  const { data: userQuest } = await supabase
+    .from('user_quests')
+    .select('id, status, started_at, progress_pct')
+    .eq('id', userQuestId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!userQuest) return { error: 'Quête introuvable' };
+  if (userQuest.status !== 'active') return { error: 'Quête non active' };
+
+  const startedAt = new Date(userQuest.started_at);
+
+  // 3. Verify there's an active occurrence today for this task
+  const taskCompletions = await fetchTaskCompletions(supabase, user.id, userQuestId, taskId);
+  const tp = computeTaskProgress(
+    task as TaskFrequency,
+    startedAt,
+    quest.duration_days,
+    taskCompletions,
+  );
+  if (!tp.isCheckableToday) {
+    if (tp.isCompletedToday) return { success: true, alreadyCompleted: true };
+    return { error: 'Aucune occurrence active aujourd\'hui pour cette tâche.' };
+  }
+
+  // 4. Snapshot objective completion BEFORE insertion
+  const wasObjectiveCompleteBefore = await isObjectiveFullyComplete(
+    supabase,
+    user.id,
+    userQuestId,
+    objective.id,
+    startedAt,
+    quest.duration_days,
+  );
+
+  // 5. Insert the completion
   const { error: insertError } = await supabase.from('user_tasks').insert({
     user_id: user.id,
     task_id: taskId,
     user_quest_id: userQuestId,
   });
-
   if (insertError) {
-    // Most likely a duplicate (task already completed today). Treat as no-op.
-    if (insertError.code !== '23505') {
-      return { error: 'Impossible d’enregistrer la tâche' };
-    }
+    if (insertError.code !== '23505') return { error: "Impossible d'enregistrer la tâche" };
     return { success: true, alreadyCompleted: true };
   }
 
-  // Fetch current profile to compute new XP
+  // 6. XP gain = task XP, plus objective XP if objective just completed
+  let xpGain = task.xp_reward;
+  const objectiveCompleteAfter = await isObjectiveFullyComplete(
+    supabase,
+    user.id,
+    userQuestId,
+    objective.id,
+    startedAt,
+    quest.duration_days,
+  );
+  const objectiveJustCompleted = !wasObjectiveCompleteBefore && objectiveCompleteAfter;
+  if (objectiveJustCompleted) xpGain += objective.xp_reward;
+
+  // 7. Profile XP/level
   const { data: profile } = await supabase
     .from('profiles')
     .select('xp, level')
     .eq('id', user.id)
     .single();
-
   if (!profile) return { error: 'Profil introuvable' };
 
-  const newXp = profile.xp + task.xp_reward;
+  let newXp = profile.xp + xpGain;
+
+  // 8. Quest progress
+  const questProgress = await computeQuestProgress(
+    supabase,
+    user.id,
+    userQuestId,
+    quest.id,
+    startedAt,
+    quest.duration_days,
+  );
+  const isFinalCompletion = questProgress.pct >= 100;
+  let questXpBonus = 0;
+  if (isFinalCompletion && userQuest.progress_pct < 100) {
+    questXpBonus = quest.xp_reward;
+    newXp += questXpBonus;
+  }
+
   const newLevel = levelFromXp(newXp);
   const leveledUp = newLevel > profile.level;
 
-  // Update profile
+  await supabase.from('profiles').update({ xp: newXp, level: newLevel }).eq('id', user.id);
+
   await supabase
-    .from('profiles')
-    .update({ xp: newXp, level: newLevel })
-    .eq('id', user.id);
+    .from('user_quests')
+    .update({
+      progress_pct: questProgress.pct,
+      ...(isFinalCompletion
+        ? { status: 'completed', completed_at: new Date().toISOString() }
+        : {}),
+    })
+    .eq('id', userQuestId);
 
-  // Update quest progress: count completed tasks vs total
-  const { count: totalTasks } = await supabase
-    .from('tasks')
-    .select('id, objectives!inner(quest_id)', { count: 'exact', head: true })
-    .eq('objectives.quest_id', (task.objectives as { quest_id: string }).quest_id);
-
-  const { count: completedCount } = await supabase
-    .from('user_tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('user_quest_id', userQuestId);
-
-  if (totalTasks && totalTasks > 0) {
-    const progress = Math.min(100, Math.round(((completedCount ?? 0) / totalTasks) * 100));
-    await supabase
-      .from('user_quests')
-      .update({
-        progress_pct: progress,
-        ...(progress >= 100 ? { status: 'completed', completed_at: new Date().toISOString() } : {}),
-      })
-      .eq('id', userQuestId);
-  }
-
-  // Check trophy unlocks (fire-and-forget; non-blocking)
+  // 9. Trophy check (non-blocking)
   await checkTrophyUnlocks(supabase, user.id, { newLevel, leveledUp });
 
   revalidatePath('/game');
   revalidatePath(`/game/quest/${userQuestId}`);
 
-  return { success: true, leveledUp, newLevel };
+  return {
+    success: true,
+    leveledUp,
+    newLevel,
+    objectiveJustCompleted,
+    questJustCompleted: isFinalCompletion && userQuest.progress_pct < 100,
+    xpGain: xpGain + questXpBonus,
+  };
 }
 
-/**
- * Check and award trophies based on user's current state.
- * This is a simple rule engine — extend with more conditions as needed.
- */
+async function fetchTaskCompletions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  userQuestId: string,
+  taskId: string,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from('user_tasks')
+    .select('completed_date')
+    .eq('user_id', userId)
+    .eq('user_quest_id', userQuestId)
+    .eq('task_id', taskId);
+  return (data ?? []).map((r) => r.completed_date);
+}
+
+async function isObjectiveFullyComplete(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  userQuestId: string,
+  objectiveId: string,
+  startedAt: Date,
+  durationDays: number,
+): Promise<boolean> {
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, frequency_days, xp_reward')
+    .eq('objective_id', objectiveId);
+
+  if (!tasks || tasks.length === 0) return false;
+
+  const taskProgresses = await Promise.all(
+    tasks.map(async (t) => {
+      const completions = await fetchTaskCompletions(supabase, userId, userQuestId, t.id);
+      return computeTaskProgress(t as TaskFrequency, startedAt, durationDays, completions);
+    }),
+  );
+
+  return aggregateObjective(objectiveId, taskProgresses).isFullyComplete;
+}
+
+async function computeQuestProgress(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  userQuestId: string,
+  questId: string,
+  startedAt: Date,
+  durationDays: number,
+) {
+  const { data: objectives } = await supabase
+    .from('objectives')
+    .select('id, tasks (id, frequency_days, xp_reward)')
+    .eq('quest_id', questId);
+
+  if (!objectives) return { pct: 0, totalCompleted: 0, totalExpected: 0, totalMissed: 0, objectivesCompleted: 0, objectivesTotal: 0 };
+
+  const objectiveProgresses = await Promise.all(
+    objectives.map(async (obj) => {
+      const tasks = (obj.tasks ?? []) as TaskFrequency[];
+      const tps = await Promise.all(
+        tasks.map(async (t) => {
+          const completions = await fetchTaskCompletions(supabase, userId, userQuestId, t.id);
+          return computeTaskProgress(t, startedAt, durationDays, completions);
+        }),
+      );
+      return aggregateObjective(obj.id, tps);
+    }),
+  );
+
+  return aggregateQuest(objectiveProgresses);
+}
+
 async function checkTrophyUnlocks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -113,15 +247,13 @@ async function checkTrophyUnlocks(
   const ownedIds = new Set(owned?.map((t) => t.trophy_id) ?? []);
 
   const toUnlock: string[] = [];
+  const findCode = (code: string) =>
+    trophies.find((t) => t.code === code && !ownedIds.has(t.id))?.id;
 
-  // First task
   const { count: taskCount } = await supabase
     .from('user_tasks')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
-
-  const findCode = (code: string) =>
-    trophies.find((t) => t.code === code && !ownedIds.has(t.id))?.id;
 
   if (taskCount && taskCount >= 1) {
     const id = findCode('first_task');
@@ -131,8 +263,6 @@ async function checkTrophyUnlocks(
     const id = findCode('hundred_tasks');
     if (id) toUnlock.push(id);
   }
-
-  // Level milestones
   if (ctx.newLevel >= 5) {
     const id = findCode('level_5');
     if (id) toUnlock.push(id);
@@ -146,7 +276,6 @@ async function checkTrophyUnlocks(
     if (id) toUnlock.push(id);
   }
 
-  // Completed quest
   const { count: completedQuests } = await supabase
     .from('user_quests')
     .select('id', { count: 'exact', head: true })
@@ -158,12 +287,9 @@ async function checkTrophyUnlocks(
     if (id) toUnlock.push(id);
   }
 
-  // TODO: implement streak detection (7 days in a row, 30 days, etc.)
-  // This requires a daily query of distinct completed_date over the last N days.
-
   if (toUnlock.length > 0) {
-    await supabase.from('user_trophies').insert(
-      toUnlock.map((trophy_id) => ({ user_id: userId, trophy_id })),
-    );
+    await supabase
+      .from('user_trophies')
+      .insert(toUnlock.map((trophy_id) => ({ user_id: userId, trophy_id })));
   }
 }

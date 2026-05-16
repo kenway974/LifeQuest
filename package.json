@@ -14,7 +14,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/database.ts",
+    "db:types": "node scripts/gen-db-types.mjs",
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

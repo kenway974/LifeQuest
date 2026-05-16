@@ -5,10 +5,18 @@ import { difficultyColors } from '@/lib/utils';
 import { ArrowLeft, X } from 'lucide-react';
 import { TaskChecklist } from '@/components/game/TaskChecklist';
 import { abandonQuestAction } from '../../quests/[id]/actions';
+import {
+  aggregateObjective,
+  aggregateQuest,
+  computeTaskProgress,
+  type TaskFrequency,
+  type ObjectiveProgress,
+  type TaskProgress,
+} from '@/lib/quests';
 
 /**
  * Active quest tracking page.
- * Shows objectives + daily tasks for the user to check off.
+ * Shows the full objective/task tree with per-task & per-objective progress.
  */
 export default async function ActiveQuestPage({
   params,
@@ -29,7 +37,7 @@ export default async function ActiveQuestPage({
         id, title, description, difficulty, duration_days,
         objectives (
           id, title, description, order_index, xp_reward,
-          tasks (id, title, description, xp_reward, is_recurring, order_index)
+          tasks (id, title, description, xp_reward, frequency_days, order_index)
         )
       )
     `)
@@ -39,16 +47,45 @@ export default async function ActiveQuestPage({
 
   if (!userQuest) notFound();
 
-  // Today's completed tasks
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: todayTasks } = await supabase
+  // All completions for this user_quest, grouped by task
+  const { data: completions } = await supabase
     .from('user_tasks')
-    .select('task_id')
+    .select('task_id, completed_date')
     .eq('user_id', user!.id)
-    .eq('user_quest_id', userQuestId)
-    .eq('completed_date', today);
+    .eq('user_quest_id', userQuestId);
 
-  const completedToday = new Set(todayTasks?.map((t) => t.task_id) ?? []);
+  const completionsByTask = new Map<string, string[]>();
+  for (const c of completions ?? []) {
+    const arr = completionsByTask.get(c.task_id) ?? [];
+    arr.push(c.completed_date);
+    completionsByTask.set(c.task_id, arr);
+  }
+
+  const startedAt = new Date(userQuest.started_at);
+  const durationDays = userQuest.quest.duration_days;
+
+  const objectives = (userQuest.quest.objectives ?? []).sort(
+    (a, b) => a.order_index - b.order_index,
+  );
+
+  const objectiveProgresses: ObjectiveProgress[] = [];
+  const taskProgressByObjective = new Map<string, TaskProgress[]>();
+
+  for (const obj of objectives) {
+    const tasks = (obj.tasks ?? []).sort((a, b) => a.order_index - b.order_index);
+    const tps = tasks.map((t) =>
+      computeTaskProgress(
+        t as TaskFrequency,
+        startedAt,
+        durationDays,
+        completionsByTask.get(t.id) ?? [],
+      ),
+    );
+    taskProgressByObjective.set(obj.id, tps);
+    objectiveProgresses.push(aggregateObjective(obj.id, tps));
+  }
+
+  const questAgg = aggregateQuest(objectiveProgresses);
   const diff = difficultyColors[userQuest.quest.difficulty];
 
   return (
@@ -68,22 +105,34 @@ export default async function ActiveQuestPage({
           {diff.name} • En cours
         </span>
         <h1 className="mb-3 font-display text-3xl font-black md:text-4xl">{userQuest.quest.title}</h1>
+        {userQuest.quest.description && (
+          <p className="text-sm text-[color:var(--color-text-secondary)]">{userQuest.quest.description}</p>
+        )}
 
         <div className="mt-6">
-          <div className="mb-2 flex justify-between text-sm">
-            <span className="text-[color:var(--color-text-secondary)]">Progression globale</span>
-            <span className="font-display font-bold text-glow-cyan">{userQuest.progress_pct}%</span>
+          <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
+            <span className="text-[color:var(--color-text-secondary)]">
+              {questAgg.objectivesCompleted}/{questAgg.objectivesTotal} objectifs ·{' '}
+              <span className="text-[color:var(--color-difficulty-easy)]">{questAgg.totalCompleted}</span>
+              {questAgg.totalMissed > 0 && (
+                <>
+                  {' '}/ <span className="text-red-400">{questAgg.totalMissed} ratées</span>
+                </>
+              )}
+              {' '}/ {questAgg.totalExpected} occurrences
+            </span>
+            <span className="font-display font-bold text-glow-cyan">{questAgg.pct}%</span>
           </div>
           <div
             className="h-3 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]"
             role="progressbar"
-            aria-valuenow={userQuest.progress_pct}
+            aria-valuenow={questAgg.pct}
             aria-valuemin={0}
             aria-valuemax={100}
           >
             <div
               className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)] transition-all"
-              style={{ width: `${userQuest.progress_pct}%` }}
+              style={{ width: `${questAgg.pct}%` }}
             />
           </div>
         </div>
@@ -98,17 +147,26 @@ export default async function ActiveQuestPage({
         </form>
       </div>
 
-      <section aria-labelledby="today-heading">
-        <h2 id="today-heading" className="mb-4 font-display text-2xl font-bold">
-          Tâches du jour
-        </h2>
-
-        <TaskChecklist
-          userQuestId={userQuestId}
-          objectives={(userQuest.quest.objectives ?? []).sort((a, b) => a.order_index - b.order_index)}
-          completedTaskIds={Array.from(completedToday)}
-        />
-      </section>
+      <TaskChecklist
+        userQuestId={userQuestId}
+        objectives={objectives.map((obj) => ({
+          id: obj.id,
+          title: obj.title,
+          description: obj.description,
+          xp_reward: obj.xp_reward,
+          tasks: (obj.tasks ?? [])
+            .sort((a, b) => a.order_index - b.order_index)
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              xp_reward: t.xp_reward,
+              frequency_days: t.frequency_days ?? 1,
+            })),
+          progress: objectiveProgresses.find((p) => p.objectiveId === obj.id)!,
+          taskProgress: taskProgressByObjective.get(obj.id) ?? [],
+        }))}
+      />
     </div>
   );
 }

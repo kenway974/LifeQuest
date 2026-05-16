@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { difficultyColors } from '@/lib/utils';
-import { ArrowLeft, Clock, Zap, Target, Play } from 'lucide-react';
+import { ArrowLeft, Clock, Zap, Target, Play, Calendar } from 'lucide-react';
 import { startQuestAction } from './actions';
+import { frequencyLabel } from '@/lib/quests';
 
 export default async function QuestDetailPage({
   params,
@@ -22,7 +23,7 @@ export default async function QuestDetailPage({
       id, title, description, type, difficulty, duration_days, xp_reward,
       objectives (
         id, title, description, order_index, xp_reward,
-        tasks (id, title, description, xp_reward, is_recurring, order_index)
+        tasks (id, title, description, xp_reward, frequency_days, order_index)
       )
     `)
     .eq('id', id)
@@ -112,9 +113,13 @@ export default async function QuestDetailPage({
                     .map((t) => (
                       <li
                         key={t.id}
-                        className="flex items-center justify-between rounded-md bg-[color:var(--color-bg-elevated)] px-3 py-1.5 text-sm"
+                        className="flex items-center justify-between gap-3 rounded-md bg-[color:var(--color-bg-elevated)] px-3 py-1.5 text-sm"
                       >
-                        <span className="text-[color:var(--color-text-secondary)]">{t.title}</span>
+                        <span className="min-w-0 flex-1 truncate text-[color:var(--color-text-secondary)]">{t.title}</span>
+                        <span className="inline-flex items-center gap-1 text-xs text-[color:var(--color-text-muted)]">
+                          <Calendar className="h-3 w-3" />
+                          {frequencyLabel(t.frequency_days ?? 1)}
+                        </span>
                         <span className="text-xs text-glow-cyan">+{t.xp_reward} XP</span>
                       </li>
                     ))}

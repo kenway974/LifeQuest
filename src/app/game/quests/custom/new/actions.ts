@@ -36,21 +36,25 @@ export async function createCustomQuestAction(input: z.infer<typeof Schema>) {
   // XP reward scales with difficulty
   const xpRewards = { easy: 50, medium: 100, hard: 200, expert: 400, legendary: 800 };
 
-  const { error } = await supabase.from('quests').insert({
-    title: parsed.data.title,
-    description: parsed.data.description,
-    type: 'custom',
-    difficulty: parsed.data.difficulty,
-    duration_days: parsed.data.duration_days,
-    xp_reward: xpRewards[parsed.data.difficulty],
-    created_by: user.id,
-    is_published: false, // private to the creator
-  });
+  const { data: inserted, error } = await supabase
+    .from('quests')
+    .insert({
+      title: parsed.data.title,
+      description: parsed.data.description,
+      type: 'custom',
+      difficulty: parsed.data.difficulty,
+      duration_days: parsed.data.duration_days,
+      xp_reward: xpRewards[parsed.data.difficulty],
+      created_by: user.id,
+      is_published: false, // private until the user is happy with it
+    })
+    .select('id')
+    .single();
 
-  if (error) {
+  if (error || !inserted) {
     return { error: 'Création impossible. Réessaie.' };
   }
 
   revalidatePath('/game/quests/custom');
-  return { success: true };
+  return { success: true, questId: inserted.id };
 }

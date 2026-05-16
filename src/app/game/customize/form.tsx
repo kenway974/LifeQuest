@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { extractAccentColor, deriveSecondary } from '@/lib/theme/extract-accent';
+import { ToastHost, useToasts } from '@/components/ui/Toast';
 
 interface Props {
   initialBackgroundUrl: string;
@@ -14,13 +15,26 @@ interface Props {
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_SECONDS = 15;
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm';
+const ALLOWED_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+]);
+const ACCEPT = Array.from(ALLOWED_MIMES).join(',');
 
 function detectType(mime: string): 'image' | 'gif' | 'video' | null {
+  if (!ALLOWED_MIMES.has(mime)) return null;
   if (mime === 'image/gif') return 'gif';
   if (mime.startsWith('video/')) return 'video';
   if (mime.startsWith('image/')) return 'image';
   return null;
+}
+
+function formatMo(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
 }
 
 function probeVideoDuration(file: File): Promise<number> {
@@ -64,6 +78,7 @@ export function CustomizationForm({
   const [message, setMessage] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toasts, pushError, pushSuccess, dismiss } = useToasts();
 
   useEffect(() => {
     return () => {
@@ -71,8 +86,8 @@ export function CustomizationForm({
     };
   }, []);
 
-  function rejectFile(msg: string) {
-    setMessage(msg);
+  function rejectFile(title: string, body: string) {
+    pushError(body, title);
     setFile(null);
     if (inputRef.current) inputRef.current.value = '';
   }
@@ -83,27 +98,51 @@ export function CustomizationForm({
       setFile(null);
       return;
     }
+
+    // 1. File size
     if (picked.size > MAX_BYTES) {
-      rejectFile(`Fichier trop lourd : ${(picked.size / 1024 / 1024).toFixed(1)} Mo (max ${MAX_BYTES / 1024 / 1024} Mo).`);
-      return;
-    }
-    const type = detectType(picked.type);
-    if (!type) {
-      rejectFile('Format non supporté. Utilise JPG, PNG, WebP, GIF, MP4 ou WebM.');
+      rejectFile(
+        'Fichier trop lourd',
+        `${picked.name} pèse ${formatMo(picked.size)}. La limite est de ${formatMo(MAX_BYTES)}. Compresse ton fichier et réessaie.`,
+      );
       return;
     }
 
+    // 2. Empty / unknown mime
+    if (!picked.type) {
+      rejectFile(
+        'Format non reconnu',
+        `Impossible de détecter le type de "${picked.name}". Renomme avec une extension claire (.mp4, .jpg, etc.) ou essaie un autre fichier.`,
+      );
+      return;
+    }
+
+    // 3. Allowed mime
+    const type = detectType(picked.type);
+    if (!type) {
+      rejectFile(
+        'Format non supporté',
+        `${picked.type || 'Type inconnu'} n'est pas accepté.\nFormats valides : JPG, PNG, WebP, GIF, MP4, WebM.`,
+      );
+      return;
+    }
+
+    // 4. Video-only checks (duration)
     if (type === 'video') {
       let duration: number;
       try {
         duration = await probeVideoDuration(picked);
       } catch (err) {
-        rejectFile(err instanceof Error ? err.message : 'Vidéo invalide.');
+        rejectFile(
+          'Vidéo illisible',
+          `${err instanceof Error ? err.message : 'Vidéo invalide'}.\nVérifie que le fichier n'est pas corrompu et qu'il est bien en MP4 (H.264) ou WebM (VP8/VP9).`,
+        );
         return;
       }
       if (duration > MAX_VIDEO_SECONDS) {
         rejectFile(
-          `Vidéo trop longue : ${duration.toFixed(1)} s (max ${MAX_VIDEO_SECONDS} s). Coupe ta vidéo et réessaie.`,
+          'Vidéo trop longue',
+          `${duration.toFixed(1)} s — la limite est de ${MAX_VIDEO_SECONDS} s pour une boucle de fond.\nCoupe ta vidéo (CapCut, ffmpeg, iMovie…) et réessaie.`,
         );
         return;
       }
@@ -135,7 +174,7 @@ export function CustomizationForm({
     } = await supabase.auth.getUser();
     if (!user) {
       setBusy(false);
-      setMessage('Tu dois être connecté.');
+      pushError('Tu dois être connecté.', 'Session expirée');
       return;
     }
 
@@ -150,7 +189,7 @@ export function CustomizationForm({
         .upload(path, file, { contentType: file.type, upsert: false });
       if (uploadError) {
         setBusy(false);
-        setMessage(`Erreur upload : ${uploadError.message}`);
+        pushError(uploadError.message, 'Erreur upload');
         return;
       }
       const { data: pub } = supabase.storage.from('user-backgrounds').getPublicUrl(path);
@@ -172,7 +211,7 @@ export function CustomizationForm({
 
     setBusy(false);
     if (error) {
-      setMessage(`Erreur sauvegarde : ${error.message}`);
+      pushError(error.message, 'Erreur sauvegarde');
       return;
     }
     if (file) {
@@ -180,7 +219,8 @@ export function CustomizationForm({
       setPreviewUrl(publicUrl);
       if (inputRef.current) inputRef.current.value = '';
     }
-    setMessage('✓ Personnalisation sauvegardée — recharge la page pour voir le rendu complet.');
+    setMessage('Personnalisation sauvegardée — recharge la page pour voir le rendu complet.');
+    pushSuccess('Personnalisation sauvegardée', 'OK');
   }
 
   async function handleRemove() {
@@ -207,7 +247,7 @@ export function CustomizationForm({
 
     setBusy(false);
     if (error) {
-      setMessage(`Erreur : ${error.message}`);
+      pushError(error.message, 'Erreur');
       return;
     }
     setPreviewUrl('');
@@ -216,7 +256,8 @@ export function CustomizationForm({
     setAccent(null);
     setAdaptive(false);
     if (inputRef.current) inputRef.current.value = '';
-    setMessage('✓ Fond retiré');
+    setMessage('Fond retiré.');
+    pushSuccess('Fond retiré');
   }
 
   const hasPreview = Boolean(previewUrl);
@@ -342,17 +383,12 @@ export function CustomizationForm({
       </div>
 
       {message && (
-        <p
-          role={message.startsWith('✓') ? 'status' : 'alert'}
-          className={
-            message.startsWith('✓')
-              ? 'text-sm text-glow-cyan'
-              : 'rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200'
-          }
-        >
+        <p role="status" className="text-sm text-glow-cyan">
           {message}
         </p>
       )}
+
+      <ToastHost toasts={toasts} onDismiss={dismiss} />
     </form>
   );
 }

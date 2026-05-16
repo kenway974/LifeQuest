@@ -131,6 +131,38 @@ body {
 .animate-glow { animation: glow-pulse 2s ease-in-out infinite; }
 
 /* ============================================================
+   Form inputs
+   ============================================================ */
+.input {
+  width: 100%;
+  border: 1px solid var(--color-border-bright);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-neon-cyan);
+}
+.input-bare {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text-primary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.input-bare:hover {
+  border-color: var(--color-border-default);
+}
+.input-bare:focus {
+  outline: none;
+  border-color: var(--color-neon-cyan);
+  background: var(--color-bg-elevated);
+}
+
+/* ============================================================
    Utility classes
    ============================================================ */
 

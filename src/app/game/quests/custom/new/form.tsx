@@ -37,13 +37,13 @@ export function CustomQuestForm() {
     }
 
     const result = await createCustomQuestAction(parsed.data);
-    if (result?.error) {
-      setError(result.error);
+    if (result?.error || !result?.questId) {
+      setError(result?.error ?? 'Création impossible.');
       setLoading(false);
       return;
     }
 
-    router.push('/game/quests/custom');
+    router.push(`/game/quests/custom/${result.questId}/edit`);
     router.refresh();
   }
 
@@ -127,7 +127,7 @@ export function CustomQuestForm() {
       </button>
 
       <p className="text-xs text-[color:var(--color-text-muted)]">
-        Tu pourras ajouter des objectifs et tâches après la création.
+        Après création, tu seras redirigé vers l&rsquo;éditeur pour ajouter objectifs et tâches.
       </p>
     </form>
   );
