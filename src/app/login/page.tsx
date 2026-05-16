@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { LoginForm } from './login-form';
 import Link from 'next/link';
 
@@ -20,7 +21,9 @@ export default function LoginPage() {
             Connecte-toi pour continuer ta progression.
           </p>
 
-          <LoginForm />
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-md bg-[color:var(--color-bg-elevated)]" />}>
+            <LoginForm />
+          </Suspense>
 
           <p className="mt-6 text-center text-sm text-[color:var(--color-text-secondary)]">
             Pas encore de compte ?{' '}

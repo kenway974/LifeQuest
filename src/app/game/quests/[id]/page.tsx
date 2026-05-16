@@ -8,10 +8,13 @@ import { frequencyLabel } from '@/lib/quests';
 
 export default async function QuestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error: errorParam } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -88,6 +91,15 @@ export default async function QuestDetailPage({
             Démarrer cette quête
           </button>
         </form>
+
+        {errorParam && (
+          <p
+            role="alert"
+            className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+          >
+            {errorParam}
+          </p>
+        )}
       </div>
 
       <section aria-labelledby="objectives-heading">

@@ -10,8 +10,14 @@ import { createClient } from '@/lib/supabase/server';
  *  - max 1 active main quest at a time
  *  - max 3 active secondary quests if no main, else 1
  *  - custom quests require has_custom_quests = true
+ *
+ * Always redirects (no return value). On failure, redirects back to the quest
+ * detail page with ?error=<msg> that the page can surface to the user.
  */
-export async function startQuestAction(questId: string) {
+export async function startQuestAction(questId: string): Promise<void> {
+  const fail = (msg: string) =>
+    redirect(`/game/quests/${questId}?error=${encodeURIComponent(msg)}`);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,9 +30,7 @@ export async function startQuestAction(questId: string) {
     .eq('id', questId)
     .single();
 
-  if (!quest) {
-    return { error: 'Quête introuvable' };
-  }
+  if (!quest) fail('Quête introuvable');
 
   const { data: actives } = await supabase
     .from('user_quests')
@@ -37,25 +41,25 @@ export async function startQuestAction(questId: string) {
   const hasMain = actives?.some((q) => q.quest.type === 'main') ?? false;
   const secondaryCount = actives?.filter((q) => q.quest.type === 'secondary').length ?? 0;
 
-  if (quest.type === 'main' && hasMain) {
-    return { error: 'Tu suis déjà une quête principale. Termine-la ou abandonne-la.' };
+  if (quest!.type === 'main' && hasMain) {
+    fail('Tu suis déjà une quête principale. Termine-la ou abandonne-la.');
   }
 
-  if (quest.type === 'secondary') {
+  if (quest!.type === 'secondary') {
     const maxAllowed = hasMain ? 1 : 3;
     if (secondaryCount >= maxAllowed) {
-      return { error: `Limite atteinte (${maxAllowed} quêtes secondaires max).` };
+      fail(`Limite atteinte (${maxAllowed} quêtes secondaires max).`);
     }
   }
 
-  if (quest.type === 'custom') {
+  if (quest!.type === 'custom') {
     const { data: profile } = await supabase
       .from('profiles')
       .select('has_custom_quests')
       .eq('id', user.id)
       .single();
     if (!profile?.has_custom_quests) {
-      return { error: 'Quêtes personnalisées non débloquées (2€ à vie).' };
+      fail('Quêtes personnalisées non débloquées (2€ à vie).');
     }
   }
 
@@ -65,12 +69,10 @@ export async function startQuestAction(questId: string) {
     .select('id')
     .single();
 
-  if (error || !inserted) {
-    return { error: 'Impossible de démarrer la quête.' };
-  }
+  if (error || !inserted) fail('Impossible de démarrer la quête.');
 
   revalidatePath('/game');
-  redirect(`/game/quest/${inserted.id}`);
+  redirect(`/game/quest/${inserted!.id}`);
 }
 
 /** Abandon an active quest. */
