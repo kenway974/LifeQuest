@@ -10,7 +10,13 @@
  * Keys must exactly match objective titles in scripts/seed.ts.
  */
 
-import type { StatKey } from './character-stats';
+import {
+  normalizeStats,
+  STAT_KEYS,
+  type StatKey,
+  type StatValues,
+} from './character-stats';
+import { buildOccurrences, type TaskFrequency } from './quests';
 
 export type StatImpactMap = Partial<Record<StatKey, number>>;
 
@@ -151,15 +157,6 @@ export function getCatalogImpacts(objectiveTitle: string): StatImpactMap {
 // ============================================================
 // Lazy stat computation
 // ============================================================
-
-import { buildOccurrences, type TaskFrequency } from './quests';
-import {
-  emptyStats,
-  normalizeStats,
-  STAT_KEYS,
-  type StatKey,
-  type StatValues,
-} from './character-stats';
 
 interface ObjectiveData {
   id: string;
