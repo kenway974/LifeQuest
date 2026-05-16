@@ -16,7 +16,9 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
-import type { Database, Difficulty } from '../src/types/database';
+import type { Database } from '../src/types/database';
+
+type Difficulty = Database['public']['Enums']['difficulty'];
 
 config({ path: '.env.local' });
 
