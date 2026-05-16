@@ -38,7 +38,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     <div className="relative min-h-screen">
       <BackgroundRenderer
         backgroundUrl={settings?.background_url ?? null}
-        backgroundType={settings?.background_type ?? null}
+        backgroundType={(settings?.background_type ?? null) as 'image' | 'gif' | 'video' | null}
         blurPx={settings?.background_blur_px ?? 16}
         adaptiveTheme={settings?.adaptive_theme_enabled ?? false}
         accentColor={settings?.accent_color ?? null}

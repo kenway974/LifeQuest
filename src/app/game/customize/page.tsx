@@ -32,7 +32,7 @@ export default async function CustomizePage() {
 
       <CustomizationForm
         initialBackgroundUrl={settings?.background_url ?? ''}
-        initialBackgroundType={settings?.background_type ?? null}
+        initialBackgroundType={(settings?.background_type ?? null) as 'image' | 'gif' | 'video' | null}
         initialBlurPx={settings?.background_blur_px ?? 16}
         initialAdaptiveTheme={settings?.adaptive_theme_enabled ?? false}
         initialAccentColor={settings?.accent_color ?? null}
