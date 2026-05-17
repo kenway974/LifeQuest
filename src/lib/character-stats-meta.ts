@@ -252,7 +252,6 @@ export function computeCharacterStats(
       if (totalExpected === 0) continue;
 
       const isAchieved = totalCompleted === totalExpected;
-      const completionRatio = totalCompleted / totalExpected;
 
       for (const [stat, value] of Object.entries(impacts) as [StatKey, number][]) {
         if (!STAT_KEYS.includes(stat) || !value) continue;

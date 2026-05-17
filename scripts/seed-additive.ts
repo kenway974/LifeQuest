@@ -54,7 +54,7 @@ async function seedAdditive() {
 
   for (const q of [...MAIN_QUESTS, ...SECONDARY_QUESTS]) {
     // 1. Find or create the quest (catalog scope only: created_by IS NULL)
-    let { data: existingQuest } = await supabase
+    const { data: existingQuest } = await supabase
       .from('quests')
       .select('id')
       .eq('title', q.title)
