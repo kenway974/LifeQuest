@@ -48,6 +48,7 @@ const TaskSchema = z.object({
   description: z.string().max(500).optional().nullable(),
   xp_reward: z.number().int().min(1).max(1_000).default(10),
   frequency_days: z.number().int().min(1).max(365).default(1),
+  is_optional: z.boolean().default(false),
 });
 
 const TaskUpdateSchema = TaskSchema.extend({
@@ -229,6 +230,7 @@ export async function createTaskAction(input: z.infer<typeof TaskSchema> & { que
     description: parsed.data.description ?? null,
     xp_reward: parsed.data.xp_reward,
     frequency_days: parsed.data.frequency_days,
+    is_optional: parsed.data.is_optional,
     order_index: count ?? 0,
   });
 
@@ -254,6 +256,7 @@ export async function updateTaskAction(
       description: parsed.data.description ?? null,
       xp_reward: parsed.data.xp_reward,
       frequency_days: parsed.data.frequency_days,
+      is_optional: parsed.data.is_optional,
     })
     .eq('id', parsed.data.taskId)
     .eq('objective_id', parsed.data.objectiveId);

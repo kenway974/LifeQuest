@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { ArrowLeft, User, Trophy, EyeOff, Lock } from 'lucide-react';
+import { ArrowLeft, User, Trophy, EyeOff, Lock, Star } from 'lucide-react';
 import { RadarChart } from '@/components/character/RadarChart';
 import { normalizeStats, STAT_DEFS, type StatValues } from '@/lib/character-stats';
 
@@ -20,7 +20,7 @@ export default async function PublicPlayerProfilePage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, pseudo, avatar_url, level, xp, created_at, stats_public, stats_initialized, cached_stats, cached_stats_at')
+    .select('id, pseudo, avatar_url, level, xp, created_at, stats_public, stats_initialized, cached_stats, cached_stats_at, stars')
     .eq('pseudo', pseudo)
     .single();
 
@@ -67,10 +67,22 @@ export default async function PublicPlayerProfilePage({
           <Stat label="Quêtes finies" value={completedQuests ?? 0} />
         </div>
 
-        <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[color:var(--color-bg-elevated)] px-4 py-2 text-sm">
-          <Trophy className="h-4 w-4 text-glow-violet" />
-          <span className="font-display font-bold">{trophyCount ?? 0}</span>
-          <span className="text-[color:var(--color-text-muted)]">trophées</span>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[color:var(--color-bg-elevated)] px-4 py-2 text-sm">
+            <Trophy className="h-4 w-4 text-glow-violet" />
+            <span className="font-display font-bold">{trophyCount ?? 0}</span>
+            <span className="text-[color:var(--color-text-muted)]">trophées</span>
+          </div>
+          {profile.stars > 0 && (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-300"
+              title="Quêtes terminées parfaitement"
+            >
+              <Star className="h-4 w-4 fill-current" />
+              <span>{profile.stars}</span>
+              <span className="text-amber-300/80">étoile{profile.stars > 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
       </div>
 

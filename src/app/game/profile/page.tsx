@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, User, Star } from 'lucide-react';
 import { PlayerSearch } from '@/components/game/PlayerSearch';
 
 export const metadata = { title: 'Profil' };
@@ -13,7 +13,7 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('pseudo, avatar_url, level, xp, has_custom_quests, created_at')
+    .select('pseudo, avatar_url, level, xp, has_custom_quests, created_at, stars')
     .eq('id', user!.id)
     .single();
 
@@ -41,7 +41,16 @@ export default async function ProfilePage() {
         <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
           Niveau {profile?.level} • {profile?.xp} XP
         </p>
-        <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+        {profile?.stars && profile.stars > 0 ? (
+          <div
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 text-sm font-semibold text-amber-300"
+            title="Quêtes terminées parfaitement (mandatory + bonus + 0 raté)"
+          >
+            <Star className="h-4 w-4 fill-current" />
+            {profile.stars} étoile{profile.stars > 1 ? 's' : ''}
+          </div>
+        ) : null}
+        <p className="mt-3 text-xs text-[color:var(--color-text-muted)]">
           Membre depuis le{' '}
           {profile?.created_at && new Date(profile.created_at).toLocaleDateString('fr-FR')}
         </p>

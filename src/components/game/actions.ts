@@ -31,7 +31,7 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   const { data: task } = await supabase
     .from('tasks')
     .select(`
-      id, xp_reward, frequency_days, objective_id,
+      id, xp_reward, frequency_days, is_optional, objective_id,
       objective:objectives!inner (
         id, xp_reward, quest_id,
         quest:quests!inner ( id, duration_days, xp_reward )
@@ -43,6 +43,7 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   if (!task) return { error: 'Tâche introuvable' };
   const objective = task.objective;
   const quest = objective.quest;
+  const OPTIONAL_XP_MULTIPLIER = 1.5;
 
   // 2. Verify the user_quest matches
   const { data: userQuest } = await supabase
@@ -91,8 +92,10 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
     return { success: true, alreadyCompleted: true };
   }
 
-  // 6. XP gain = task XP, plus objective XP if objective just completed
-  let xpGain = task.xp_reward;
+  // 6. XP gain = task XP (×1.5 if optional), plus objective XP if objective just completed
+  let xpGain = task.is_optional
+    ? Math.round(task.xp_reward * OPTIONAL_XP_MULTIPLIER)
+    : task.xp_reward;
   const objectiveCompleteAfter = await isObjectiveFullyComplete(
     supabase,
     user.id,
@@ -125,7 +128,8 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   );
   const isFinalCompletion = questProgress.pct >= 100;
   let questXpBonus = 0;
-  if (isFinalCompletion && userQuest.progress_pct < 100) {
+  const wasJustCompleted = isFinalCompletion && userQuest.progress_pct < 100;
+  if (wasJustCompleted) {
     questXpBonus = quest.xp_reward;
     newXp += questXpBonus;
   }
@@ -133,7 +137,21 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   const newLevel = levelFromXp(newXp);
   const leveledUp = newLevel > profile.level;
 
-  await supabase.from('profiles').update({ xp: newXp, level: newLevel }).eq('id', user.id);
+  // Star: quest just finished AND every objective is "Maîtrisé" (mandatory + optional + 0 missed).
+  const earnedStar = wasJustCompleted && questProgress.isPerfectRun;
+
+  const profileUpdate: Record<string, unknown> = { xp: newXp, level: newLevel };
+  if (earnedStar) {
+    // Read-modify-write on stars (server-owned counter, no concurrent writes per user).
+    const { data: refreshed } = await supabase
+      .from('profiles')
+      .select('stars')
+      .eq('id', user.id)
+      .single();
+    profileUpdate.stars = (refreshed?.stars ?? 0) + 1;
+  }
+
+  await supabase.from('profiles').update(profileUpdate).eq('id', user.id);
 
   await supabase
     .from('user_quests')
@@ -150,6 +168,7 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
 
   revalidatePath('/game');
   revalidatePath('/game/character');
+  revalidatePath('/game/profile');
   revalidatePath(`/game/quest/${userQuestId}`);
 
   return {
@@ -157,7 +176,8 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
     leveledUp,
     newLevel,
     objectiveJustCompleted,
-    questJustCompleted: isFinalCompletion && userQuest.progress_pct < 100,
+    questJustCompleted: wasJustCompleted,
+    starEarned: earnedStar,
     xpGain: xpGain + questXpBonus,
   };
 }
@@ -187,7 +207,7 @@ async function isObjectiveFullyComplete(
 ): Promise<boolean> {
   const { data: tasks } = await supabase
     .from('tasks')
-    .select('id, frequency_days, xp_reward')
+    .select('id, frequency_days, xp_reward, is_optional')
     .eq('objective_id', objectiveId);
 
   if (!tasks || tasks.length === 0) return false;
@@ -199,7 +219,7 @@ async function isObjectiveFullyComplete(
     }),
   );
 
-  return aggregateObjective(objectiveId, taskProgresses).isFullyComplete;
+  return aggregateObjective(objectiveId, taskProgresses).isAchieved;
 }
 
 async function computeQuestProgress(
@@ -212,7 +232,7 @@ async function computeQuestProgress(
 ) {
   const { data: objectives } = await supabase
     .from('objectives')
-    .select('id, tasks (id, frequency_days, xp_reward)')
+    .select('id, tasks (id, frequency_days, xp_reward, is_optional)')
     .eq('quest_id', questId);
 
   if (!objectives) return { pct: 0, totalCompleted: 0, totalExpected: 0, totalMissed: 0, objectivesCompleted: 0, objectivesTotal: 0 };

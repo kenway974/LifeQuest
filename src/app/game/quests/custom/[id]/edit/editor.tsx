@@ -26,6 +26,7 @@ interface Task {
   description: string | null;
   xp_reward: number;
   frequency_days: number;
+  is_optional: boolean;
   order_index: number;
 }
 
@@ -446,6 +447,7 @@ function ObjectiveCard({
                       description: null,
                       xp_reward: 10,
                       frequency_days: 1,
+                      is_optional: false,
                     }),
                   )
                 }
@@ -500,15 +502,23 @@ function TaskRow({
   const [desc, setDesc] = useState(task.description ?? '');
   const [xp, setXp] = useState(task.xp_reward);
   const [freq, setFreq] = useState(task.frequency_days);
+  const [isOptional, setIsOptional] = useState(task.is_optional);
 
   const hasChanges =
     title !== task.title ||
     (desc ?? '') !== (task.description ?? '') ||
     xp !== task.xp_reward ||
-    freq !== task.frequency_days;
+    freq !== task.frequency_days ||
+    isOptional !== task.is_optional;
 
   return (
-    <div className="rounded-md border border-[color:var(--color-border-default)] bg-[color:var(--color-bg-elevated)]/50 p-3">
+    <div
+      className={`rounded-md border p-3 ${
+        isOptional
+          ? 'border-amber-400/40 bg-amber-400/5'
+          : 'border-[color:var(--color-border-default)] bg-[color:var(--color-bg-elevated)]/50'
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
@@ -567,6 +577,17 @@ function TaskRow({
       />
 
       <div className="mt-2 flex flex-wrap items-center gap-3">
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={isOptional}
+            onChange={(e) => setIsOptional(e.target.checked)}
+            className="h-3.5 w-3.5 accent-amber-400"
+          />
+          <span className={isOptional ? 'font-semibold text-amber-300' : 'text-[color:var(--color-text-muted)]'}>
+            Tâche bonus (XP × 1.5)
+          </span>
+        </label>
         <span className="text-xs text-[color:var(--color-text-muted)]">
           {frequencyLabel(freq)}
         </span>
@@ -584,6 +605,7 @@ function TaskRow({
                   description: desc.trim() || null,
                   xp_reward: xp,
                   frequency_days: freq,
+                  is_optional: isOptional,
                 }),
               )
             }

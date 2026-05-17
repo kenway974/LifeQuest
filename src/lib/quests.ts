@@ -16,6 +16,7 @@ export interface TaskFrequency {
   id: string;
   frequency_days: number;
   xp_reward: number;
+  is_optional?: boolean;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -146,6 +147,7 @@ export function buildOccurrences(
 
 export interface TaskProgress {
   taskId: string;
+  isOptional: boolean;
   occurrences: Occurrence[];
   expectedTotal: number;
   completedCount: number;
@@ -198,6 +200,7 @@ export function computeTaskProgress(
 
   return {
     taskId: task.id,
+    isOptional: task.is_optional ?? false,
     occurrences,
     expectedTotal: occurrences.length,
     completedCount,
@@ -213,49 +216,85 @@ export function computeTaskProgress(
 
 export interface ObjectiveProgress {
   objectiveId: string;
+  /** Aggregates across MANDATORY tasks only (used for quest completion). */
   totalExpected: number;
   totalCompleted: number;
   totalMissed: number;
   pct: number;
-  isFullyComplete: boolean;
+  /** All mandatory tasks fully complete → "Accompli". */
+  isAchieved: boolean;
+  /** All tasks (mandatory + optional) fully complete with zero miss → "Maîtrisé". */
+  isMastered: boolean;
+  /** Across all tasks (mandatory + optional). For full-quest stats. */
+  totalAllExpected: number;
+  totalAllCompleted: number;
+  totalAllMissed: number;
   tasksDoneCount: number;
   tasksTotal: number;
+  optionalTotal: number;
+  optionalDoneCount: number;
 }
 
 export function aggregateObjective(
   objectiveId: string,
   taskProgresses: TaskProgress[],
 ): ObjectiveProgress {
-  const totalExpected = taskProgresses.reduce((s, t) => s + t.expectedTotal, 0);
-  const totalCompleted = taskProgresses.reduce((s, t) => s + t.completedCount, 0);
-  const totalMissed = taskProgresses.reduce((s, t) => s + t.missedCount, 0);
-  const tasksDone = taskProgresses.filter((t) => t.isFullyComplete).length;
+  const mandatory = taskProgresses.filter((t) => !t.isOptional);
+  const optional = taskProgresses.filter((t) => t.isOptional);
+
+  const totalExpected = mandatory.reduce((s, t) => s + t.expectedTotal, 0);
+  const totalCompleted = mandatory.reduce((s, t) => s + t.completedCount, 0);
+  const totalMissed = mandatory.reduce((s, t) => s + t.missedCount, 0);
+  const tasksDone = mandatory.filter((t) => t.isFullyComplete).length;
+
+  const totalAllExpected = taskProgresses.reduce((s, t) => s + t.expectedTotal, 0);
+  const totalAllCompleted = taskProgresses.reduce((s, t) => s + t.completedCount, 0);
+  const totalAllMissed = taskProgresses.reduce((s, t) => s + t.missedCount, 0);
+  const optionalDone = optional.filter((t) => t.isFullyComplete).length;
+
+  const isAchieved = mandatory.length > 0 && tasksDone === mandatory.length;
+  const isMastered =
+    taskProgresses.length > 0 &&
+    tasksDone === mandatory.length &&
+    optionalDone === optional.length &&
+    totalAllMissed === 0;
+
   return {
     objectiveId,
     totalExpected,
     totalCompleted,
     totalMissed,
     pct: totalExpected === 0 ? 0 : Math.round((totalCompleted / totalExpected) * 100),
-    isFullyComplete: taskProgresses.length > 0 && tasksDone === taskProgresses.length,
+    isAchieved,
+    isMastered,
+    totalAllExpected,
+    totalAllCompleted,
+    totalAllMissed,
     tasksDoneCount: tasksDone,
-    tasksTotal: taskProgresses.length,
+    tasksTotal: mandatory.length,
+    optionalTotal: optional.length,
+    optionalDoneCount: optionalDone,
   };
 }
 
 export interface QuestProgress {
+  /** Across mandatory tasks only — drives `user_quests.progress_pct`. */
   totalExpected: number;
   totalCompleted: number;
   totalMissed: number;
   pct: number;
   objectivesCompleted: number;
   objectivesTotal: number;
+  /** True if every objective (mandatory + optional) is mastered: star-eligible. */
+  isPerfectRun: boolean;
 }
 
 export function aggregateQuest(objectiveProgresses: ObjectiveProgress[]): QuestProgress {
   const totalExpected = objectiveProgresses.reduce((s, o) => s + o.totalExpected, 0);
   const totalCompleted = objectiveProgresses.reduce((s, o) => s + o.totalCompleted, 0);
   const totalMissed = objectiveProgresses.reduce((s, o) => s + o.totalMissed, 0);
-  const done = objectiveProgresses.filter((o) => o.isFullyComplete).length;
+  const done = objectiveProgresses.filter((o) => o.isAchieved).length;
+  const mastered = objectiveProgresses.filter((o) => o.isMastered).length;
   return {
     totalExpected,
     totalCompleted,
@@ -263,6 +302,8 @@ export function aggregateQuest(objectiveProgresses: ObjectiveProgress[]): QuestP
     pct: totalExpected === 0 ? 0 : Math.round((totalCompleted / totalExpected) * 100),
     objectivesCompleted: done,
     objectivesTotal: objectiveProgresses.length,
+    isPerfectRun:
+      objectiveProgresses.length > 0 && mastered === objectiveProgresses.length,
   };
 }
 

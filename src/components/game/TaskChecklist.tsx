@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Zap, Calendar, CheckCircle2, Lock, AlertCircle } from 'lucide-react';
+import { Check, Zap, Calendar, CheckCircle2, Lock, AlertCircle, Star, Sparkles } from 'lucide-react';
 import { completeTaskAction } from './actions';
 import { frequencyLabel, type ObjectiveProgress, type TaskProgress } from '@/lib/quests';
 
@@ -12,6 +12,7 @@ interface Task {
   description: string | null;
   xp_reward: number;
   frequency_days: number;
+  is_optional: boolean;
 }
 
 interface Objective {
@@ -73,25 +74,37 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
 
       {objectives.map((obj, idx) => {
         const tpById = new Map(obj.taskProgress.map((tp) => [tp.taskId, tp]));
-        const done = obj.progress.isFullyComplete;
+        const isAchieved = obj.progress.isAchieved;
+        const isMastered = obj.progress.isMastered;
         const hasMissed = obj.progress.totalMissed > 0;
+        const hasOptional = obj.progress.optionalTotal > 0;
 
         return (
           <article
             key={obj.id}
-            className={`card-neon p-5 ${done ? 'border-2 border-[color:var(--color-difficulty-easy)]/60' : ''}`}
+            className={`card-neon p-5 ${
+              isMastered
+                ? 'border-2 border-amber-400/70'
+                : isAchieved
+                  ? 'border-2 border-[color:var(--color-difficulty-easy)]/60'
+                  : ''
+            }`}
           >
             <header className="mb-3">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-sm font-black text-glow-violet">
                   {String(idx + 1).padStart(2, '0')}
                 </span>
                 <h3 className="flex-1 font-display text-lg font-bold">{obj.title}</h3>
-                {done && (
+                {isMastered ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                    <Star className="h-3.5 w-3.5 fill-current" /> Maîtrisé
+                  </span>
+                ) : isAchieved ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-difficulty-easy)]/15 px-2 py-0.5 text-xs font-semibold text-[color:var(--color-difficulty-easy)]">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Accompli
                   </span>
-                )}
+                ) : null}
                 <span className="text-xs text-[color:var(--color-text-muted)]">+{obj.xp_reward} XP</span>
               </div>
 
@@ -111,6 +124,11 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
                       </>
                     )}
                     {' '}/ {obj.progress.totalExpected} occurrences
+                    {hasOptional && (
+                      <span className="ml-2 text-amber-300">
+                        + {obj.progress.optionalDoneCount}/{obj.progress.optionalTotal} bonus
+                      </span>
+                    )}
                   </span>
                   <span className="font-mono text-[color:var(--color-text-secondary)]">{obj.progress.pct}%</span>
                 </div>
@@ -123,9 +141,11 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
                 >
                   <div
                     className={`h-full transition-all ${
-                      done
-                        ? 'bg-[color:var(--color-difficulty-easy)]'
-                        : 'bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]'
+                      isMastered
+                        ? 'bg-amber-400'
+                        : isAchieved
+                          ? 'bg-[color:var(--color-difficulty-easy)]'
+                          : 'bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]'
                     }`}
                     style={{ width: `${obj.progress.pct}%` }}
                   />
@@ -179,7 +199,7 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
 
                         <div className="min-w-0 flex-1">
                           <p
-                            className={`font-medium ${
+                            className={`flex items-center gap-2 font-medium ${
                               isFullyComplete
                                 ? 'line-through'
                                 : isDoneToday || isCheckable
@@ -188,6 +208,11 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
                             }`}
                           >
                             {task.title}
+                            {task.is_optional && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                                <Sparkles className="h-3 w-3" /> Bonus
+                              </span>
+                            )}
                           </p>
                           {task.description && (
                             <p className="mt-0.5 text-xs text-[color:var(--color-text-muted)]">
@@ -233,8 +258,13 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
                           </div>
                         </div>
 
-                        <span className="ml-2 inline-flex items-center gap-1 self-center text-xs text-glow-cyan">
-                          <Zap className="h-3.5 w-3.5" />+{task.xp_reward}
+                        <span
+                          className={`ml-2 inline-flex items-center gap-1 self-center text-xs ${
+                            task.is_optional ? 'text-amber-300' : 'text-glow-cyan'
+                          }`}
+                        >
+                          <Zap className="h-3.5 w-3.5" />+
+                          {task.is_optional ? Math.round(task.xp_reward * 1.5) : task.xp_reward}
                         </span>
                       </button>
                     </li>

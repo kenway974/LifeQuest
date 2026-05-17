@@ -37,7 +37,7 @@ export default async function ActiveQuestPage({
         id, title, description, difficulty, duration_days,
         objectives (
           id, title, description, order_index, xp_reward,
-          tasks (id, title, description, xp_reward, frequency_days, order_index)
+          tasks (id, title, description, xp_reward, frequency_days, is_optional, order_index)
         )
       )
     `)
@@ -162,6 +162,7 @@ export default async function ActiveQuestPage({
               description: t.description,
               xp_reward: t.xp_reward,
               frequency_days: t.frequency_days ?? 1,
+              is_optional: t.is_optional ?? false,
             })),
           progress: objectiveProgresses.find((p) => p.objectiveId === obj.id)!,
           taskProgress: taskProgressByObjective.get(obj.id) ?? [],

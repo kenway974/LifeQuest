@@ -20,6 +20,12 @@ import { buildOccurrences, type TaskFrequency } from './quests';
 
 export type StatImpactMap = Partial<Record<StatKey, number>>;
 
+/**
+ * Stats are capped slightly above the baseline ceiling (100) so optional tasks
+ * still have a tangible reward when the user is already near the top.
+ */
+export const STAT_CAP = 110;
+
 const CATALOG: Record<string, StatImpactMap> = {
   // ===== Reprendre le contrôle de sa vie =====
   'Clarifier ta vision': { discipline: 4, focus: 3 },
@@ -259,7 +265,7 @@ export function computeCharacterStats(
 
         if (earned > 0) {
           const before = current[stat];
-          current[stat] = Math.min(100, current[stat] + earned);
+          current[stat] = Math.min(STAT_CAP, current[stat] + earned);
           const applied = current[stat] - before;
           if (applied > 0) {
             const label = isAchieved

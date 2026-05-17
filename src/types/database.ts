@@ -66,6 +66,7 @@ export type Database = {
           id: string
           level: number
           pseudo: string
+          stars: number
           stats_initialized: boolean
           stats_public: boolean
           updated_at: string
@@ -81,6 +82,7 @@ export type Database = {
           id: string
           level?: number
           pseudo: string
+          stars?: number
           stats_initialized?: boolean
           stats_public?: boolean
           updated_at?: string
@@ -96,6 +98,7 @@ export type Database = {
           id?: string
           level?: number
           pseudo?: string
+          stars?: number
           stats_initialized?: boolean
           stats_public?: boolean
           updated_at?: string
@@ -238,6 +241,7 @@ export type Database = {
           description: string | null
           frequency_days: number
           id: string
+          is_optional: boolean
           is_recurring: boolean
           objective_id: string
           order_index: number
@@ -249,6 +253,7 @@ export type Database = {
           description?: string | null
           frequency_days?: number
           id?: string
+          is_optional?: boolean
           is_recurring?: boolean
           objective_id: string
           order_index?: number
@@ -260,6 +265,7 @@ export type Database = {
           description?: string | null
           frequency_days?: number
           id?: string
+          is_optional?: boolean
           is_recurring?: boolean
           objective_id?: string
           order_index?: number

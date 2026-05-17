@@ -37,6 +37,8 @@ interface TaskSeed {
   xp_reward: number;
   /** Frequency in days. 1 = daily, 7 = weekly, 30 = monthly, 365 = once. Defaults to 1. */
   frequency_days?: number;
+  /** Bonus task: XP × 1.5, doesn't block objective completion, all of them must be done to earn a star. */
+  is_optional?: boolean;
 }
 
 interface ObjectiveSeed {
@@ -107,6 +109,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         xp_reward: 250,
         tasks: [
           { title: 'Revue mensuelle : victoires, échecs, ajustements', xp_reward: 100, frequency_days: 30 },
+          { title: 'Lire 1 page de développement personnel', xp_reward: 15, is_optional: true },
         ],
       },
     ],
@@ -129,6 +132,7 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: 'Douche froide', xp_reward: 25 },
           { title: '10 min de lecture au lever', xp_reward: 20 },
           { title: 'Faire son lit immédiatement', xp_reward: 10 },
+          { title: 'Habillé et prêt avant 7h', xp_reward: 15, is_optional: true },
         ],
       },
       {
@@ -192,6 +196,8 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: '30 min d’activité physique', xp_reward: 30 },
           { title: '10 000 pas dans la journée', xp_reward: 25 },
           { title: 'Stretching ou mobilité 10 min', xp_reward: 20, frequency_days: 2 },
+          { title: 'S’exposer au soleil 15 min', xp_reward: 15, is_optional: true },
+          { title: 'Marcher pieds nus 10 min', xp_reward: 10, is_optional: true, frequency_days: 2 },
         ],
       },
       {
@@ -202,6 +208,7 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: 'Couché avant 23h', xp_reward: 25 },
           { title: '7-8h de sommeil', xp_reward: 30 },
           { title: 'Pas d’écran 30 min avant le coucher', xp_reward: 20 },
+          { title: 'Pas de grignotage entre repas', xp_reward: 15, is_optional: true },
         ],
       },
       {
@@ -251,6 +258,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Pause de 3 respirations avant de réagir', xp_reward: 20 },
           { title: 'Identifier le déclencheur d’une réaction forte', xp_reward: 30, frequency_days: 2 },
+          { title: 'Noter 1 moment où tu as bien réagi', xp_reward: 15, is_optional: true },
         ],
       },
       {
@@ -290,6 +298,7 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: '30 min de lecture (livre, pas écran)', xp_reward: 25 },
           { title: 'Activité créative ou manuelle 20 min', xp_reward: 25 },
           { title: 'Sortie / promenade sans téléphone', xp_reward: 40, frequency_days: 3 },
+          { title: 'Saluer un voisin ou un inconnu', xp_reward: 15, is_optional: true, frequency_days: 3 },
         ],
       },
       {
@@ -339,6 +348,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Posture droite + épaules en arrière toute la journée', xp_reward: 20 },
           { title: '5 min de power-pose le matin', xp_reward: 15 },
+          { title: 'Garder le contact visuel dans une conversation', xp_reward: 15, is_optional: true },
         ],
       },
       {
@@ -369,6 +379,7 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: '90 min de travail profond', xp_reward: 40 },
           { title: 'Téléphone en mode ne pas déranger', xp_reward: 20 },
           { title: 'Single-tasking : 1 chose à la fois', xp_reward: 25 },
+          { title: 'Faire 1 tâche sans aucun stimulus (ni musique, ni notif)', xp_reward: 20, is_optional: true },
         ],
       },
       {
@@ -418,6 +429,7 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: 'Annuler 1 abonnement inutile', xp_reward: 80, frequency_days: 365 },
           { title: 'Préparer ses repas à la maison', xp_reward: 25 },
           { title: 'Revue hebdo des achats impulsifs', xp_reward: 50, frequency_days: 7 },
+          { title: 'Comparer 1 prix avant un achat', xp_reward: 15, is_optional: true, frequency_days: 3 },
         ],
       },
       {
@@ -465,6 +477,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Noter 1 idée marquante du jour', xp_reward: 15 },
           { title: 'Surligner 1 phrase qui te parle', xp_reward: 10 },
+          { title: 'Discuter de ta lecture avec quelqu’un', xp_reward: 30, is_optional: true, frequency_days: 7 },
         ],
       },
       {
@@ -511,6 +524,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Créer / produire quelque chose avec la compétence', xp_reward: 80, frequency_days: 7 },
           { title: 'Documenter ta progression (vidéo, photo, écrit)', xp_reward: 40, frequency_days: 7 },
+          { title: 'Filmer ta pratique du jour', xp_reward: 30, is_optional: true, frequency_days: 7 },
         ],
       },
       {
@@ -549,6 +563,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Marche consciente 15 min', xp_reward: 20 },
           { title: 'Un repas en pleine conscience', xp_reward: 25, frequency_days: 2 },
+          { title: 'Méditer en pleine nature', xp_reward: 40, is_optional: true, frequency_days: 7 },
         ],
       },
       {
@@ -597,6 +612,7 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: 'Appeler un proche', xp_reward: 30, frequency_days: 7 },
           { title: 'Envoyer un message gratuit à un ami', xp_reward: 15, frequency_days: 2 },
           { title: 'Organiser un moment ensemble', xp_reward: 80, frequency_days: 14 },
+          { title: 'Faire un geste gratuit pour quelqu’un', xp_reward: 25, is_optional: true, frequency_days: 7 },
         ],
       },
       {
@@ -654,6 +670,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Bilan hebdo : ce qui a marché / pas marché', xp_reward: 80, frequency_days: 7 },
           { title: 'Refondre 1 ancienne création avec ton nouveau niveau', xp_reward: 150, frequency_days: 30 },
+          { title: 'Demander un retour public à 1 création', xp_reward: 40, is_optional: true, frequency_days: 14 },
         ],
       },
     ],
@@ -674,6 +691,7 @@ const MAIN_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Donner ou jeter 3 objets inutiles', xp_reward: 25 },
           { title: 'Vider 1 catégorie complète (vêtements, livres, etc.)', xp_reward: 80, frequency_days: 7 },
+          { title: 'Photographier 1 espace réorganisé', xp_reward: 20, is_optional: true, frequency_days: 7 },
         ],
       },
       {
@@ -745,6 +763,8 @@ const MAIN_QUESTS: QuestSeed[] = [
           { title: 'Définir l’intention de la semaine', xp_reward: 50, frequency_days: 7 },
           { title: 'Revue hebdo : ce qui a marché / pas marché', xp_reward: 60, frequency_days: 7 },
           { title: 'Revue mensuelle : ajuster les objectifs', xp_reward: 150, frequency_days: 30 },
+          { title: 'Noter 1 leçon apprise aujourd’hui', xp_reward: 20, is_optional: true },
+          { title: 'Aider quelqu’un anonymement', xp_reward: 40, is_optional: true, frequency_days: 7 },
         ],
       },
     ],
@@ -779,6 +799,7 @@ const SECONDARY_QUESTS: QuestSeed[] = [
         xp_reward: 100,
         tasks: [
           { title: 'Transformer 1 plainte en demande/gratitude', xp_reward: 25 },
+          { title: 'Remercier 1 personne explicitement', xp_reward: 15, is_optional: true },
         ],
       },
     ],
@@ -855,6 +876,7 @@ const SECONDARY_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Cuisiner 2 repas', xp_reward: 40 },
           { title: 'Aucun plat préparé / livraison', xp_reward: 30 },
+          { title: 'Tester 1 nouvelle recette', xp_reward: 30, is_optional: true, frequency_days: 3 },
         ],
       },
       {
@@ -918,6 +940,7 @@ const SECONDARY_QUESTS: QuestSeed[] = [
         xp_reward: 250,
         tasks: [
           { title: 'Douche froide 2 min minimum', xp_reward: 35 },
+          { title: 'Respiration Wim Hof 5 min', xp_reward: 25, is_optional: true, frequency_days: 2 },
         ],
       },
       {
@@ -974,6 +997,7 @@ const SECONDARY_QUESTS: QuestSeed[] = [
         tasks: [
           { title: 'Aucun sucre ajouté aujourd’hui', xp_reward: 60 },
           { title: 'Lire les étiquettes avant d’acheter', xp_reward: 20 },
+          { title: 'Boire 1 grand verre d’eau au lever', xp_reward: 10, is_optional: true },
         ],
       },
       {
@@ -1065,6 +1089,7 @@ const SECONDARY_QUESTS: QuestSeed[] = [
         xp_reward: 200,
         tasks: [
           { title: '50 pompes (1 ou plusieurs séries)', xp_reward: 25 },
+          { title: 'Gainage 1 minute', xp_reward: 15, is_optional: true },
         ],
       },
       {
@@ -1445,6 +1470,7 @@ async function seed() {
           title: t.title,
           xp_reward: t.xp_reward,
           frequency_days: t.frequency_days ?? 1,
+          is_optional: t.is_optional ?? false,
           order_index: j,
         });
         if (tErr) console.error(`    ✗ Task "${t.title}" failed:`, tErr);
