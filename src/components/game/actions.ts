@@ -373,6 +373,105 @@ async function checkTrophyUnlocks(
     if (id) toUnlock.push(id);
   }
 
+  // === Star-based trophies (profiles.stars) ===
+  const { data: profileForStars } = await supabase
+    .from('profiles')
+    .select('stars, stats_initialized')
+    .eq('id', userId)
+    .single();
+  const stars = profileForStars?.stars ?? 0;
+  if (stars >= 1) {
+    const id = findCode('first_star');
+    if (id) toUnlock.push(id);
+  }
+  if (stars >= 5) {
+    const id = findCode('five_stars');
+    if (id) toUnlock.push(id);
+  }
+  if (stars >= 10) {
+    const id = findCode('ten_stars');
+    if (id) toUnlock.push(id);
+  }
+  if (stars >= 25) {
+    const id = findCode('twenty_five_stars');
+    if (id) toUnlock.push(id);
+  }
+  if (stars >= 50) {
+    const id = findCode('fifty_stars');
+    if (id) toUnlock.push(id);
+  }
+
+  // Character baseline
+  if (profileForStars?.stats_initialized) {
+    const id = findCode('character_initialized');
+    if (id) toUnlock.push(id);
+  }
+
+  // === Optional task count ===
+  const { count: optionalTaskCount } = await supabase
+    .from('user_tasks')
+    .select('id, task:tasks!inner(is_optional)', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('task.is_optional', true);
+  if (optionalTaskCount && optionalTaskCount >= 1) {
+    const id = findCode('first_optional');
+    if (id) toUnlock.push(id);
+  }
+  if (optionalTaskCount && optionalTaskCount >= 30) {
+    const id = findCode('thirty_optional');
+    if (id) toUnlock.push(id);
+  }
+  if (optionalTaskCount && optionalTaskCount >= 100) {
+    const id = findCode('hundred_optional');
+    if (id) toUnlock.push(id);
+  }
+
+  // === Perfect days (objective_daily_completions count) ===
+  const { count: perfectDayCount } = await supabase
+    .from('objective_daily_completions')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  if (perfectDayCount && perfectDayCount >= 1) {
+    const id = findCode('first_perfect_day');
+    if (id) toUnlock.push(id);
+  }
+  if (perfectDayCount && perfectDayCount >= 10) {
+    const id = findCode('ten_perfect_days');
+    if (id) toUnlock.push(id);
+  }
+  if (perfectDayCount && perfectDayCount >= 30) {
+    const id = findCode('thirty_perfect_days');
+    if (id) toUnlock.push(id);
+  }
+  if (perfectDayCount && perfectDayCount >= 100) {
+    const id = findCode('hundred_perfect_days');
+    if (id) toUnlock.push(id);
+  }
+
+  // === Custom quests completed ===
+  const { count: customCompleted } = await supabase
+    .from('user_quests')
+    .select('id, quest:quests!inner(type)', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .eq('quest.type', 'custom');
+  if (customCompleted && customCompleted >= 1) {
+    const id = findCode('first_custom_done');
+    if (id) toUnlock.push(id);
+  }
+
+  // first_mastered + ten_mastered are detected via objective_daily_completions
+  // is a proxy — but the real "mastered" signal is the quest's isPerfectRun
+  // when completed. So we count perfect-run completed quests.
+  if (completedQuests && completedQuests >= 1 && stars >= 1) {
+    const id = findCode('first_mastered');
+    if (id) toUnlock.push(id);
+  }
+  if (stars >= 10) {
+    const id = findCode('ten_mastered');
+    if (id) toUnlock.push(id);
+  }
+
   if (toUnlock.length > 0) {
     await supabase
       .from('user_trophies')

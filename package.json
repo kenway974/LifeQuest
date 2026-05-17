@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "db:types": "node scripts/gen-db-types.mjs",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed:add": "tsx scripts/seed-additive.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.5.2",
