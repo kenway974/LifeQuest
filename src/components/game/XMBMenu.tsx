@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { MobileProfilePanel, type MobileProfileData } from './MobileProfilePanel';
+import { MobileSystemPanel, type MobileSystemData } from './MobileSystemPanel';
 import {
   Sword,
   Compass,
@@ -155,7 +157,13 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
   ];
 }
 
-export function XMBMenu({ activeQuest }: { activeQuest: ActiveQuestSummary | null }) {
+interface XMBMenuProps {
+  activeQuest: ActiveQuestSummary | null;
+  mobileProfile?: MobileProfileData | null;
+  mobileSystem?: MobileSystemData | null;
+}
+
+export function XMBMenu({ activeQuest, mobileProfile, mobileSystem }: XMBMenuProps) {
   const categories = useMemo(() => buildCategories(activeQuest), [activeQuest]);
   const router = useRouter();
   const [catIdx, setCatIdx] = useState(0);
@@ -348,15 +356,35 @@ export function XMBMenu({ activeQuest }: { activeQuest: ActiveQuestSummary | nul
 
       {/* Mobile fallback — classic grid */}
       <div className="md:hidden">
-        <MobileGrid categories={categories} />
+        <MobileGrid
+          categories={categories}
+          mobileProfile={mobileProfile ?? null}
+          mobileSystem={mobileSystem ?? null}
+        />
       </div>
     </>
   );
 }
 
-function MobileGrid({ categories }: { categories: XMBCategory[] }) {
+function MobileGrid({
+  categories,
+  mobileProfile,
+  mobileSystem,
+}: {
+  categories: XMBCategory[];
+  mobileProfile: MobileProfileData | null;
+  mobileSystem: MobileSystemData | null;
+}) {
   const [activeIdx, setActiveIdx] = useState(0);
   const active = categories[activeIdx] ?? categories[0];
+
+  // Categories that render inline content instead of an item list
+  const embedded =
+    active.id === 'social' && mobileProfile
+      ? <MobileProfilePanel data={mobileProfile} />
+      : active.id === 'system' && mobileSystem
+        ? <MobileSystemPanel data={mobileSystem} />
+        : null;
 
   return (
     <>
@@ -370,42 +398,48 @@ function MobileGrid({ categories }: { categories: XMBCategory[] }) {
           <div>
             <p className="font-display text-xl font-black uppercase tracking-wider">{active.label}</p>
             <p className="text-xs text-[color:var(--color-text-muted)]">
-              {active.items.length} option{active.items.length > 1 ? 's' : ''}
+              {embedded
+                ? active.label === 'Profil'
+                  ? 'Ta fiche'
+                  : 'Paramètres et personnalisation'
+                : `${active.items.length} option${active.items.length > 1 ? 's' : ''}`}
             </p>
           </div>
         </header>
 
-        <div className="space-y-3">
-          {active.items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="card-neon flex items-center gap-4 p-4 transition-transform active:scale-[0.98]"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-cyan">
-                  <Icon className="h-6 w-6" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-base font-bold">{item.label}</p>
-                  <p className="text-xs text-[color:var(--color-text-muted)]">{item.description}</p>
-                  {item.progressPct !== undefined && (
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
-                      <div
-                        className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
-                        style={{ width: `${item.progressPct}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-                <span className="font-display text-xs uppercase tracking-widest text-[color:var(--color-neon-cyan)]">
-                  ›
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        {embedded ?? (
+          <div className="space-y-3">
+            {active.items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="card-neon flex items-center gap-4 p-4 transition-transform active:scale-[0.98]"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-cyan">
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-base font-bold">{item.label}</p>
+                    <p className="text-xs text-[color:var(--color-text-muted)]">{item.description}</p>
+                    {item.progressPct !== undefined && (
+                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
+                        <div
+                          className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
+                          style={{ width: `${item.progressPct}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <span className="font-display text-xs uppercase tracking-widest text-[color:var(--color-neon-cyan)]">
+                    ›
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bottom navigation — Clash-Royale-style fixed tab bar */}
