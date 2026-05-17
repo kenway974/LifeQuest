@@ -290,7 +290,17 @@ async function computeQuestProgress(
     .select('id, tasks (id, frequency_days, xp_reward, is_optional)')
     .eq('quest_id', questId);
 
-  if (!objectives) return { pct: 0, totalCompleted: 0, totalExpected: 0, totalMissed: 0, objectivesCompleted: 0, objectivesTotal: 0 };
+  if (!objectives) {
+    return {
+      pct: 0,
+      totalCompleted: 0,
+      totalExpected: 0,
+      totalMissed: 0,
+      objectivesCompleted: 0,
+      objectivesTotal: 0,
+      isPerfectRun: false,
+    };
+  }
 
   const objectiveProgresses = await Promise.all(
     objectives.map(async (obj) => {
