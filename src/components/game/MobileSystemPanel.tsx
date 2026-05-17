@@ -32,7 +32,6 @@ export function MobileSystemPanel({ data }: { data: MobileSystemData }) {
           initialNotificationsEnabled={data.notificationsEnabled}
           initialNotificationHour={data.notificationHour}
           initialStatsPublic={data.statsPublic}
-          initialTheme={data.theme}
         />
       </Section>
 
@@ -48,6 +47,7 @@ export function MobileSystemPanel({ data }: { data: MobileSystemData }) {
           initialBlurPx={data.backgroundBlurPx}
           initialAdaptiveTheme={data.adaptiveTheme}
           initialAccentColor={data.accentColor}
+          initialTheme={data.theme}
         />
       </Section>
     </div>

@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { extractAccentColor, deriveSecondary } from '@/lib/theme/extract-accent';
 import { ToastHost, useToasts } from '@/components/ui/Toast';
+import { ThemePicker, type ThemeKey } from '@/components/game/ThemePicker';
 
 interface Props {
   initialBackgroundUrl: string;
@@ -11,6 +13,7 @@ interface Props {
   initialBlurPx: number;
   initialAdaptiveTheme: boolean;
   initialAccentColor: string | null;
+  initialTheme: string;
 }
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -67,13 +70,16 @@ export function CustomizationForm({
   initialBlurPx,
   initialAdaptiveTheme,
   initialAccentColor,
+  initialTheme,
 }: Props) {
+  const router = useRouter();
   const [previewUrl, setPreviewUrl] = useState(initialBackgroundUrl);
   const [previewType, setPreviewType] = useState<Props['initialBackgroundType']>(initialBackgroundType);
   const [file, setFile] = useState<File | null>(null);
   const [blurPx, setBlurPx] = useState(initialBlurPx);
   const [adaptive, setAdaptive] = useState(initialAdaptiveTheme);
   const [accent, setAccent] = useState<string | null>(initialAccentColor);
+  const [theme, setTheme] = useState<ThemeKey>((initialTheme as ThemeKey) || 'cyber-neon');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -205,6 +211,7 @@ export function CustomizationForm({
         background_blur_px: blurPx,
         adaptive_theme_enabled: adaptive,
         accent_color: accent,
+        theme,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', user.id);
@@ -219,8 +226,10 @@ export function CustomizationForm({
       setPreviewUrl(publicUrl);
       if (inputRef.current) inputRef.current.value = '';
     }
-    setMessage('Personnalisation sauvegardée — recharge la page pour voir le rendu complet.');
+    setMessage('Personnalisation sauvegardée.');
     pushSuccess('Personnalisation sauvegardée', 'OK');
+    // Refresh so the theme attribute is picked up by the game layout immediately.
+    router.refresh();
   }
 
   async function handleRemove() {
@@ -360,6 +369,14 @@ export function CustomizationForm({
             Importe une image colorée pour activer l'adaptation.
           </p>
         )}
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium">Thème visuel</p>
+        <p className="mb-3 text-xs text-[color:var(--color-text-muted)]">
+          Change l&rsquo;identité visuelle de l&rsquo;app. S&rsquo;applique après la sauvegarde.
+        </p>
+        <ThemePicker value={theme} onChange={setTheme} />
       </div>
 
       <div className="flex flex-wrap gap-3">

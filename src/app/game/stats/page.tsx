@@ -118,14 +118,30 @@ export default async function StatsPage() {
         </div>
       </div>
 
-      {/* Stat grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard icon={<Flame />} label="Série de jours actifs" value={streak} suffix={streak > 1 ? 'jours' : 'jour'} accent="orange" />
+      {/* Stat bento — mobile: 2 cols with featured cards spanning full width.
+          Desktop: classic 3-col grid (uniform). */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <StatCard
+          icon={<Flame />}
+          label="Série de jours actifs"
+          value={streak}
+          suffix={streak > 1 ? 'jours' : 'jour'}
+          accent="orange"
+          featured
+          className="col-span-2 md:col-span-1"
+        />
         <StatCard icon={<CheckCircle />} label="Tâches validées" value={totalTasks ?? 0} accent="cyan" />
         <StatCard icon={<Trophy />} label="Trophées" value={totalTrophies ?? 0} accent="violet" />
         <StatCard icon={<Target />} label="Quêtes actives" value={activeQuests ?? 0} accent="violet" />
-        <StatCard icon={<TrendingUp />} label="Quêtes terminées" value={completedQuests ?? 0} accent="cyan" />
-        <StatCard icon={<Zap />} label="Taux de complétion" value={`${completionRate}%`} accent="orange" />
+        <StatCard icon={<TrendingUp />} label="Quêtes finies" value={completedQuests ?? 0} accent="cyan" />
+        <StatCard
+          icon={<Zap />}
+          label="Taux de complétion"
+          value={`${completionRate}%`}
+          accent="orange"
+          featured
+          className="col-span-2 md:col-span-1"
+        />
       </div>
     </div>
   );
@@ -137,12 +153,16 @@ function StatCard({
   value,
   suffix,
   accent,
+  featured = false,
+  className = '',
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   suffix?: string;
   accent: 'violet' | 'cyan' | 'orange';
+  featured?: boolean;
+  className?: string;
 }) {
   const accentClass = {
     violet: 'text-glow-violet',
@@ -150,15 +170,27 @@ function StatCard({
     orange: 'text-[#f97316]',
   }[accent];
   return (
-    <article className="card-neon p-5">
-      <div className={`mb-2 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] ${accentClass}`}>
+    <article
+      className={`card-neon ${featured ? 'flex items-center gap-3 p-4 md:block md:p-5' : 'p-3 md:p-5'} ${className}`}
+    >
+      <div
+        className={`inline-flex items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] ${accentClass} ${
+          featured ? 'h-12 w-12 shrink-0 md:mb-2' : 'mb-2 h-8 w-8 md:h-10 md:w-10'
+        }`}
+      >
         {icon}
       </div>
-      <p className="text-xs uppercase tracking-widest text-[color:var(--color-text-muted)]">{label}</p>
-      <p className="mt-1 font-display text-3xl font-black">
-        {value}
-        {suffix && <span className="ml-1 text-sm text-[color:var(--color-text-secondary)]">{suffix}</span>}
-      </p>
+      <div className={featured ? 'flex-1 min-w-0' : ''}>
+        <p className="text-[10px] uppercase tracking-widest text-[color:var(--color-text-muted)] md:text-xs">
+          {label}
+        </p>
+        <p className={`font-display font-black ${featured ? 'text-3xl md:text-3xl' : 'text-2xl md:text-3xl'}`}>
+          {value}
+          {suffix && (
+            <span className="ml-1 text-xs text-[color:var(--color-text-secondary)] md:text-sm">{suffix}</span>
+          )}
+        </p>
+      </div>
     </article>
   );
 }
