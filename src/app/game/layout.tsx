@@ -30,12 +30,18 @@ export default async function GameLayout({ children }: { children: React.ReactNo
 
   const { data: settings } = await supabase
     .from('user_settings')
-    .select('background_url, background_type, background_blur_px, adaptive_theme_enabled, accent_color')
+    .select('background_url, background_type, background_blur_px, adaptive_theme_enabled, accent_color, theme')
     .eq('user_id', user.id)
     .single();
 
+  const theme = settings?.theme ?? 'cyber-neon';
+
   return (
-    <div className="relative min-h-screen">
+    <div
+      className="relative min-h-screen bg-[color:var(--color-bg-base)] text-[color:var(--color-text-primary)]"
+      data-theme={theme}
+      style={{ background: 'var(--body-bg-gradient), var(--color-bg-base)' }}
+    >
       <BackgroundRenderer
         backgroundUrl={settings?.background_url ?? null}
         backgroundType={(settings?.background_type ?? null) as 'image' | 'gif' | 'video' | null}

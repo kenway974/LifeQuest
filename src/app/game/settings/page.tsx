@@ -13,7 +13,7 @@ export default async function SettingsPage() {
 
   const { data: settings } = await supabase
     .from('user_settings')
-    .select('notifications_enabled, notification_hour')
+    .select('notifications_enabled, notification_hour, theme')
     .eq('user_id', user!.id)
     .single();
 
@@ -38,6 +38,7 @@ export default async function SettingsPage() {
         initialNotificationsEnabled={settings?.notifications_enabled ?? true}
         initialNotificationHour={settings?.notification_hour ?? 9}
         initialStatsPublic={profile?.stats_public ?? false}
+        initialTheme={settings?.theme ?? 'cyber-neon'}
       />
     </div>
   );

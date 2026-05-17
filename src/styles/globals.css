@@ -1,8 +1,11 @@
 @import 'tailwindcss';
 
 /* ============================================================
-   LifeQuest — Cyber Neon Design System
-   Violet électrique + Cyan sur fond dark
+   LifeQuest — Theme system
+   Default theme = Cyber Neon. Variables are scoped to :root so
+   Tailwind utilities pick them up. Overrides for other themes
+   live further down under [data-theme="..."] selectors and rely
+   on CSS cascade to take precedence inside the game layout.
    ============================================================ */
 
 @theme {
@@ -12,11 +15,15 @@
   --color-bg-card: #14172b;
   --color-bg-card-hover: #1b1f3a;
 
-  /* Neon primaries */
+  /* Primary accent (violet/gold/whatever depending on theme) */
   --color-neon-violet: #a855f7;
   --color-neon-violet-glow: #c084fc;
+
+  /* Secondary accent (cyan/copper/whatever) */
   --color-neon-cyan: #06b6d4;
   --color-neon-cyan-glow: #22d3ee;
+
+  /* Tertiary accent (pink/red/etc.) */
   --color-neon-pink: #ec4899;
 
   /* Text */
@@ -40,6 +47,126 @@
   --font-display: var(--font-display), 'Orbitron', sans-serif;
 }
 
+/* Structural variables (effects, shapes) — also default to cyber neon.
+   Themes override these alongside colors below. */
+:root {
+  --glow-text-violet: 0 0 12px rgba(168, 85, 247, 0.6), 0 0 24px rgba(168, 85, 247, 0.3);
+  --glow-text-cyan: 0 0 12px rgba(6, 182, 212, 0.6), 0 0 24px rgba(6, 182, 212, 0.3);
+  --card-radius: 12px;
+  --card-backdrop: blur(14px) saturate(1.15);
+  --card-bg: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-bg-card) 78%, transparent),
+    color-mix(in oklab, var(--color-bg-elevated) 78%, transparent)
+  );
+  --card-border-gradient: linear-gradient(
+    135deg,
+    rgba(168, 85, 247, 0.3),
+    transparent 40%,
+    rgba(6, 182, 212, 0.3)
+  );
+  --btn-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  --btn-shadow-hover: 0 0 32px rgba(168, 85, 247, 0.8);
+  --body-bg-gradient:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(168, 85, 247, 0.18), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 110%, rgba(6, 182, 212, 0.12), transparent);
+  --wallpaper-overlay: linear-gradient(180deg, rgba(7, 8, 15, 0.55) 0%, rgba(7, 8, 15, 0.75) 100%);
+}
+
+/* ============================================================
+   Theme: MINIMAL CLAIR — light, flat, no glows, sharper edges
+   ============================================================ */
+[data-theme='minimal-clair'] {
+  --color-bg-base: #f8fafc;
+  --color-bg-elevated: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f1f5f9;
+
+  --color-neon-violet: #6366f1;
+  --color-neon-violet-glow: #4f46e5;
+  --color-neon-cyan: #0891b2;
+  --color-neon-cyan-glow: #0e7490;
+  --color-neon-pink: #db2777;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  --color-difficulty-easy: #16a34a;
+  --color-difficulty-medium: #2563eb;
+  --color-difficulty-hard: #7c3aed;
+  --color-difficulty-expert: #ea580c;
+  --color-difficulty-legendary: #dc2626;
+
+  --color-border-default: #e2e8f0;
+  --color-border-bright: #cbd5e1;
+
+  --glow-text-violet: none;
+  --glow-text-cyan: none;
+  --card-radius: 10px;
+  --card-backdrop: none;
+  --card-bg: #ffffff;
+  --card-border-gradient: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.18),
+    transparent 60%,
+    rgba(8, 145, 178, 0.18)
+  );
+  --btn-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  --btn-shadow-hover: 0 8px 24px rgba(99, 102, 241, 0.35);
+  --body-bg-gradient:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99, 102, 241, 0.05), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 110%, rgba(8, 145, 178, 0.04), transparent);
+  --wallpaper-overlay: linear-gradient(180deg, rgba(248, 250, 252, 0.7) 0%, rgba(248, 250, 252, 0.88) 100%);
+}
+
+/* ============================================================
+   Theme: RPG HEROIC — dark warm, gold + copper + blood red
+   ============================================================ */
+[data-theme='rpg-heroic'] {
+  --color-bg-base: #1a0f0a;
+  --color-bg-elevated: #2a1810;
+  --color-bg-card: #3a2520;
+  --color-bg-card-hover: #4a2f25;
+
+  --color-neon-violet: #d4af37;
+  --color-neon-violet-glow: #f1c40f;
+  --color-neon-cyan: #c45a17;
+  --color-neon-cyan-glow: #e67e22;
+  --color-neon-pink: #c41e3a;
+
+  --color-text-primary: #faf6e8;
+  --color-text-secondary: #d4af7a;
+  --color-text-muted: #8a7560;
+
+  --color-difficulty-easy: #4a9b3e;
+  --color-difficulty-medium: #2a6296;
+  --color-difficulty-hard: #8b4789;
+  --color-difficulty-expert: #d2691e;
+  --color-difficulty-legendary: #a52a2a;
+
+  --color-border-default: #5a3a2a;
+  --color-border-bright: #8b6840;
+
+  --glow-text-violet: 0 0 10px rgba(212, 175, 55, 0.55);
+  --glow-text-cyan: 0 0 10px rgba(196, 90, 23, 0.55);
+  --card-radius: 6px;
+  --card-backdrop: none;
+  --card-bg: linear-gradient(180deg, #3a2520, #2a1810);
+  --card-border-gradient: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.45),
+    transparent 50%,
+    rgba(196, 90, 23, 0.35)
+  );
+  --btn-shadow: 0 0 18px rgba(212, 175, 55, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --btn-shadow-hover: 0 0 28px rgba(212, 175, 55, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --body-bg-gradient:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 175, 55, 0.18), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 110%, rgba(196, 90, 23, 0.12), transparent);
+  --wallpaper-overlay: linear-gradient(180deg, rgba(26, 15, 10, 0.6) 0%, rgba(26, 15, 10, 0.85) 100%);
+}
+
 /* ============================================================
    Base styles
    ============================================================ */
@@ -51,10 +178,7 @@ html {
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(168, 85, 247, 0.18), transparent),
-    radial-gradient(ellipse 60% 50% at 100% 110%, rgba(6, 182, 212, 0.12), transparent),
-    var(--color-bg-base);
+  background: var(--body-bg-gradient), var(--color-bg-base);
   background-attachment: fixed;
 }
 
@@ -89,7 +213,7 @@ body {
 }
 
 /* ============================================================
-   Scrollbar (subtle, neon)
+   Scrollbar (subtle, adapts to theme via accent vars)
    ============================================================ */
 ::-webkit-scrollbar {
   width: 10px;
@@ -104,7 +228,7 @@ body {
 }
 
 /* ============================================================
-   Animations
+   Animations (kept identical across themes)
    ============================================================ */
 @keyframes neon-pulse {
   0%, 100% { box-shadow: 0 0 20px currentColor, 0 0 40px currentColor; opacity: 0.95; }
@@ -163,36 +287,31 @@ body {
 }
 
 /* ============================================================
-   Utility classes
+   Utility classes — themed via CSS vars
    ============================================================ */
 
-/* Glowing neon text */
+/* Glowing text (text-shadow may be 'none' on flat themes) */
 .text-glow-violet {
   color: var(--color-neon-violet-glow);
-  text-shadow: 0 0 12px rgba(168, 85, 247, 0.6), 0 0 24px rgba(168, 85, 247, 0.3);
+  text-shadow: var(--glow-text-violet);
 }
 
 .text-glow-cyan {
   color: var(--color-neon-cyan-glow);
-  text-shadow: 0 0 12px rgba(6, 182, 212, 0.6), 0 0 24px rgba(6, 182, 212, 0.3);
+  text-shadow: var(--glow-text-cyan);
 }
 
-/* Cards — frosted glass over the live background */
+/* Cards — frosted glass on cyber, flat on minimal, solid wood on RPG */
 .card-neon {
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--color-bg-card) 78%, transparent),
-    color-mix(in oklab, var(--color-bg-elevated) 78%, transparent)
-  );
+  background: var(--card-bg);
   border: 1px solid var(--color-border-default);
-  border-radius: 12px;
+  border-radius: var(--card-radius);
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(14px) saturate(1.15);
-  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: var(--card-backdrop);
+  -webkit-backdrop-filter: var(--card-backdrop);
 }
 
-/* Solid variant — opt-in if you ever need a fully opaque card */
 .card-neon-solid {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -203,9 +322,9 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 12px;
+  border-radius: var(--card-radius);
   padding: 1px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), transparent 40%, rgba(6, 182, 212, 0.3));
+  background: var(--card-border-gradient);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -214,14 +333,14 @@ body {
   pointer-events: none;
 }
 
-/* Difficulty borders */
-.border-difficulty-easy { border-color: var(--color-difficulty-easy); box-shadow: 0 0 18px rgba(34, 197, 94, 0.35); }
-.border-difficulty-medium { border-color: var(--color-difficulty-medium); box-shadow: 0 0 18px rgba(59, 130, 246, 0.35); }
-.border-difficulty-hard { border-color: var(--color-difficulty-hard); box-shadow: 0 0 18px rgba(168, 85, 247, 0.35); }
-.border-difficulty-expert { border-color: var(--color-difficulty-expert); box-shadow: 0 0 18px rgba(249, 115, 22, 0.35); }
-.border-difficulty-legendary { border-color: var(--color-difficulty-legendary); box-shadow: 0 0 18px rgba(239, 68, 68, 0.45); }
+/* Difficulty borders (auto-adapt to themed difficulty colors) */
+.border-difficulty-easy { border-color: var(--color-difficulty-easy); box-shadow: 0 0 18px color-mix(in srgb, var(--color-difficulty-easy) 35%, transparent); }
+.border-difficulty-medium { border-color: var(--color-difficulty-medium); box-shadow: 0 0 18px color-mix(in srgb, var(--color-difficulty-medium) 35%, transparent); }
+.border-difficulty-hard { border-color: var(--color-difficulty-hard); box-shadow: 0 0 18px color-mix(in srgb, var(--color-difficulty-hard) 35%, transparent); }
+.border-difficulty-expert { border-color: var(--color-difficulty-expert); box-shadow: 0 0 18px color-mix(in srgb, var(--color-difficulty-expert) 35%, transparent); }
+.border-difficulty-legendary { border-color: var(--color-difficulty-legendary); box-shadow: 0 0 18px color-mix(in srgb, var(--color-difficulty-legendary) 45%, transparent); }
 
-/* Holographic shimmer button */
+/* Holographic shimmer button — gradient and shadow adapt per theme */
 .btn-neon {
   position: relative;
   background: linear-gradient(90deg, var(--color-neon-violet), var(--color-neon-cyan), var(--color-neon-violet));
@@ -232,24 +351,29 @@ body {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  box-shadow: var(--btn-shadow);
 }
 
 .btn-neon:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 32px rgba(168, 85, 247, 0.8);
+  box-shadow: var(--btn-shadow-hover);
 }
 
 .btn-neon:active {
   transform: translateY(0);
 }
 
-/* Subtle grid background overlay */
+/* Subtle grid background overlay — uses primary accent at low alpha */
 .bg-grid {
   background-image:
-    linear-gradient(rgba(168, 85, 247, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168, 85, 247, 0.07) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--color-neon-violet) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-neon-violet) 7%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+
+/* Wallpaper overlay used by BackgroundRenderer to keep text readable */
+.bg-wallpaper-overlay {
+  background: var(--wallpaper-overlay);
 }
 
 /* Screen-reader only */

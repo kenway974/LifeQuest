@@ -1,23 +1,31 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { env } from '@/lib/env';
+import { ThemePicker, type ThemeKey } from '@/components/game/ThemePicker';
 
 interface Props {
   initialNotificationsEnabled: boolean;
   initialNotificationHour: number;
   initialStatsPublic: boolean;
+  initialTheme: string;
 }
 
 export function SettingsForm({
   initialNotificationsEnabled,
   initialNotificationHour,
   initialStatsPublic,
+  initialTheme,
 }: Props) {
+  const router = useRouter();
   const [enabled, setEnabled] = useState(initialNotificationsEnabled);
   const [hour, setHour] = useState(initialNotificationHour);
   const [statsPublic, setStatsPublic] = useState(initialStatsPublic);
+  const [theme, setTheme] = useState<ThemeKey>(
+    (initialTheme as ThemeKey) || 'cyber-neon',
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -38,6 +46,7 @@ export function SettingsForm({
         .update({
           notifications_enabled: enabled,
           notification_hour: hour,
+          theme,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id),
@@ -49,7 +58,13 @@ export function SettingsForm({
 
     setSaving(false);
     const error = settingsErr || profileErr;
-    setMessage(error ? 'Erreur lors de la sauvegarde' : '✓ Paramètres sauvegardés');
+    if (error) {
+      setMessage('Erreur lors de la sauvegarde');
+    } else {
+      setMessage('✓ Paramètres sauvegardés');
+      // Refresh so the new theme attribute is picked up by the game layout.
+      router.refresh();
+    }
   }
 
   async function handleEnablePush() {
@@ -136,6 +151,14 @@ export function SettingsForm({
             </p>
           </div>
         </label>
+      </div>
+
+      <div className="border-t border-[color:var(--color-border-default)] pt-5">
+        <p className="mb-1 text-sm font-medium">Thème visuel</p>
+        <p className="mb-3 text-xs text-[color:var(--color-text-muted)]">
+          Change l’apparence de l’app. S’applique après la sauvegarde.
+        </p>
+        <ThemePicker value={theme} onChange={setTheme} />
       </div>
 
       <div className="flex flex-wrap gap-3">

@@ -74,13 +74,7 @@ export function BackgroundRenderer({
           style={mediaStyle}
         />
       )}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(7,8,15,0.55) 0%, rgba(7,8,15,0.75) 100%)',
-        }}
-      />
+      <div className="bg-wallpaper-overlay absolute inset-0" />
     </div>
   );
 }
