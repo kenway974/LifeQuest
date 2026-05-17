@@ -233,6 +233,12 @@ export interface ObjectiveProgress {
   tasksTotal: number;
   optionalTotal: number;
   optionalDoneCount: number;
+  /** Tasks (mandatory + optional) that have an active or completed-today occurrence. */
+  tasksDueTodayCount: number;
+  /** How many of those have been validated today. */
+  tasksDoneTodayCount: number;
+  /** True if at least one task is due today AND every task due today is done. */
+  isTodayComplete: boolean;
 }
 
 export function aggregateObjective(
@@ -259,6 +265,12 @@ export function aggregateObjective(
     optionalDone === optional.length &&
     totalAllMissed === 0;
 
+  // "Today" aggregate: a task is due today if it has an active occurrence today
+  // OR was already completed today. All tasks count (mandatory + optional).
+  const dueToday = taskProgresses.filter((t) => t.activeCount > 0 || t.isCompletedToday);
+  const doneToday = dueToday.filter((t) => t.isCompletedToday);
+  const isTodayComplete = dueToday.length > 0 && doneToday.length === dueToday.length;
+
   return {
     objectiveId,
     totalExpected,
@@ -274,6 +286,9 @@ export function aggregateObjective(
     tasksTotal: mandatory.length,
     optionalTotal: optional.length,
     optionalDoneCount: optionalDone,
+    tasksDueTodayCount: dueToday.length,
+    tasksDoneTodayCount: doneToday.length,
+    isTodayComplete,
   };
 }
 

@@ -107,6 +107,35 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
   const objectiveJustCompleted = !wasObjectiveCompleteBefore && objectiveCompleteAfter;
   if (objectiveJustCompleted) xpGain += objective.xp_reward;
 
+  // 6b. Daily "journée parfaite" bonus on this objective. Idempotent via the
+  // objective_daily_completions table — bonus is awarded at most once per day
+  // per objective per user.
+  let dailyBonusAwarded = false;
+  const todayComplete = await isObjectiveTodayComplete(
+    supabase,
+    user.id,
+    userQuestId,
+    objective.id,
+    startedAt,
+    quest.duration_days,
+  );
+  if (todayComplete) {
+    const dailyBonus = Math.max(10, Math.round(objective.xp_reward / 10));
+    const { error: dailyErr } = await supabase
+      .from('objective_daily_completions')
+      .insert({
+        user_id: user.id,
+        objective_id: objective.id,
+        user_quest_id: userQuestId,
+        xp_awarded: dailyBonus,
+      });
+    if (!dailyErr) {
+      xpGain += dailyBonus;
+      dailyBonusAwarded = true;
+    }
+    // dailyErr 23505 (unique violation) → already awarded today, silently skip.
+  }
+
   // 7. Profile XP/level
   const { data: profile } = await supabase
     .from('profiles')
@@ -176,6 +205,7 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
     leveledUp,
     newLevel,
     objectiveJustCompleted,
+    dailyBonusAwarded,
     questJustCompleted: wasJustCompleted,
     starEarned: earnedStar,
     xpGain: xpGain + questXpBonus,
@@ -195,6 +225,31 @@ async function fetchTaskCompletions(
     .eq('user_quest_id', userQuestId)
     .eq('task_id', taskId);
   return (data ?? []).map((r) => r.completed_date);
+}
+
+async function isObjectiveTodayComplete(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  userQuestId: string,
+  objectiveId: string,
+  startedAt: Date,
+  durationDays: number,
+): Promise<boolean> {
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, frequency_days, xp_reward, is_optional')
+    .eq('objective_id', objectiveId);
+
+  if (!tasks || tasks.length === 0) return false;
+
+  const taskProgresses = await Promise.all(
+    tasks.map(async (t) => {
+      const completions = await fetchTaskCompletions(supabase, userId, userQuestId, t.id);
+      return computeTaskProgress(t as TaskFrequency, startedAt, durationDays, completions);
+    }),
+  );
+
+  return aggregateObjective(objectiveId, taskProgresses).isTodayComplete;
 }
 
 async function isObjectiveFullyComplete(

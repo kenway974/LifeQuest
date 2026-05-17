@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Zap, Calendar, CheckCircle2, Lock, AlertCircle, Star, Sparkles } from 'lucide-react';
+import { Check, Zap, Calendar, CheckCircle2, Lock, AlertCircle, Star, Sparkles, Sun } from 'lucide-react';
 import { completeTaskAction } from './actions';
 import { frequencyLabel, type ObjectiveProgress, type TaskProgress } from '@/lib/quests';
 
@@ -79,6 +79,33 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
         const hasMissed = obj.progress.totalMissed > 0;
         const hasOptional = obj.progress.optionalTotal > 0;
 
+        // Optimistic "today" computation — split between mandatory and bonus so
+        // we can color the badge differently:
+        //   GOLD  = everything due today is done (mandatory + bonus, or only-mandatory objective)
+        //   GREEN = all mandatory done today but bonus tasks remain
+        const isDoneToday = (tp: TaskProgress) =>
+          tp.isCompletedToday || completedToday.has(tp.taskId);
+        const dueToday = obj.taskProgress.filter(
+          (tp) => tp.activeCount > 0 || tp.isCompletedToday,
+        );
+        const mandatoryDueToday = dueToday.filter((tp) => !tp.isOptional);
+        const bonusDueToday = dueToday.filter((tp) => tp.isOptional);
+        const mandatoryDoneToday = mandatoryDueToday.filter(isDoneToday).length;
+        const bonusDoneToday = bonusDueToday.filter(isDoneToday).length;
+        const doneToday = mandatoryDoneToday + bonusDoneToday;
+
+        const mandatoryAllDoneToday =
+          mandatoryDueToday.length > 0 && mandatoryDoneToday === mandatoryDueToday.length;
+        const everythingDoneToday =
+          dueToday.length > 0 && doneToday === dueToday.length;
+
+        // Badge state:
+        const todayStatus: 'gold' | 'green' | null = everythingDoneToday
+          ? 'gold'
+          : mandatoryAllDoneToday && bonusDueToday.length > 0
+            ? 'green'
+            : null;
+
         return (
           <article
             key={obj.id}
@@ -104,6 +131,20 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
                   <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-difficulty-easy)]/15 px-2 py-0.5 text-xs font-semibold text-[color:var(--color-difficulty-easy)]">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Accompli
                   </span>
+                ) : todayStatus === 'gold' ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-semibold text-amber-300"
+                    title="Toutes les tâches du jour sont validées (bonus inclus) — bonus XP attribué"
+                  >
+                    <Sun className="h-3.5 w-3.5 fill-current" /> Jour parfait
+                  </span>
+                ) : todayStatus === 'green' ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-difficulty-easy)]/15 px-2 py-0.5 text-xs font-semibold text-[color:var(--color-difficulty-easy)]"
+                    title="Tâches obligatoires du jour OK — il reste les bonus pour décrocher le jour parfait"
+                  >
+                    <Sun className="h-3.5 w-3.5" /> Jour validé
+                  </span>
                 ) : null}
                 <span className="text-xs text-[color:var(--color-text-muted)]">+{obj.xp_reward} XP</span>
               </div>
@@ -113,25 +154,93 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
               )}
 
               <div className="mt-3">
-                <div className="mb-1 flex flex-wrap justify-between gap-2 text-xs">
-                  <span className="text-[color:var(--color-text-muted)]">
-                    {obj.progress.tasksDoneCount}/{obj.progress.tasksTotal} tâches ·
-                    {' '}
-                    <span className="text-[color:var(--color-difficulty-easy)]">{obj.progress.totalCompleted}</span>
-                    {hasMissed && (
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Sun
+                      className={`h-3.5 w-3.5 ${
+                        todayStatus === 'gold'
+                          ? 'text-amber-300'
+                          : todayStatus === 'green'
+                            ? 'text-[color:var(--color-difficulty-easy)]'
+                            : 'text-[color:var(--color-text-muted)]'
+                      }`}
+                    />
+                    {dueToday.length === 0 ? (
+                      <span className="text-[color:var(--color-text-muted)]">rien à faire aujourd&rsquo;hui</span>
+                    ) : bonusDueToday.length > 0 ? (
                       <>
-                        {' '}/ <span className="text-red-400">{obj.progress.totalMissed}</span>
+                        <span
+                          className={`font-display text-sm font-bold ${
+                            mandatoryAllDoneToday
+                              ? 'text-[color:var(--color-difficulty-easy)]'
+                              : 'text-[color:var(--color-text-primary)]'
+                          }`}
+                        >
+                          {mandatoryDoneToday}/{mandatoryDueToday.length}
+                        </span>
+                        <span className="text-[color:var(--color-text-muted)]">oblig.</span>
+                        <span className="text-[color:var(--color-text-muted)]">·</span>
+                        <Sparkles
+                          className={`h-3 w-3 ${
+                            bonusDoneToday === bonusDueToday.length
+                              ? 'text-amber-300'
+                              : 'text-[color:var(--color-text-muted)]'
+                          }`}
+                        />
+                        <span
+                          className={`font-display text-sm font-bold ${
+                            bonusDoneToday === bonusDueToday.length
+                              ? 'text-amber-300'
+                              : 'text-[color:var(--color-text-primary)]'
+                          }`}
+                        >
+                          {bonusDoneToday}/{bonusDueToday.length}
+                        </span>
+                        <span className="text-[color:var(--color-text-muted)]">bonus</span>
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className={`font-display text-sm font-bold ${
+                            mandatoryAllDoneToday
+                              ? 'text-amber-300'
+                              : 'text-[color:var(--color-text-primary)]'
+                          }`}
+                        >
+                          {mandatoryDoneToday}/{mandatoryDueToday.length}
+                        </span>
+                        <span className="text-[color:var(--color-text-muted)]">tâche(s) du jour</span>
                       </>
                     )}
-                    {' '}/ {obj.progress.totalExpected} occurrences
+                  </span>
+                  <span className="font-mono text-[color:var(--color-text-secondary)]">{obj.progress.pct}%</span>
+                </div>
+
+                <details className="mb-2">
+                  <summary className="cursor-pointer select-none text-xs text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]">
+                    Voir le total
+                  </summary>
+                  <div className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                    <span title="Tâches dont toutes les occurrences ont été validées sur la durée de la quête">
+                      {obj.progress.tasksDoneCount}/{obj.progress.tasksTotal} tâches achevées
+                    </span>
+                    {' · '}
+                    <span title="Occurrences validées sur le total prévu (toute la quête)">
+                      <span className="text-[color:var(--color-difficulty-easy)]">{obj.progress.totalCompleted}</span>
+                      {hasMissed && (
+                        <>
+                          {' '}/ <span className="text-red-400">{obj.progress.totalMissed}</span>
+                        </>
+                      )}
+                      {' '}/ {obj.progress.totalExpected} occurrences
+                    </span>
                     {hasOptional && (
                       <span className="ml-2 text-amber-300">
                         + {obj.progress.optionalDoneCount}/{obj.progress.optionalTotal} bonus
                       </span>
                     )}
-                  </span>
-                  <span className="font-mono text-[color:var(--color-text-secondary)]">{obj.progress.pct}%</span>
-                </div>
+                  </div>
+                </details>
                 <div
                   className="h-1.5 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]"
                   role="progressbar"

@@ -14,6 +14,52 @@ export type Database = {
   }
   public: {
     Tables: {
+      objective_daily_completions: {
+        Row: {
+          completed_date: string
+          objective_id: string
+          user_id: string
+          user_quest_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          completed_date?: string
+          objective_id: string
+          user_id: string
+          user_quest_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          completed_date?: string
+          objective_id?: string
+          user_id?: string
+          user_quest_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_daily_completions_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_daily_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_daily_completions_user_quest_id_fkey"
+            columns: ["user_quest_id"]
+            isOneToOne: false
+            referencedRelation: "user_quests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       objectives: {
         Row: {
           created_at: string
