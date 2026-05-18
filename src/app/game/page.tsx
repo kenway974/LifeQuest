@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { XMBMenu, type ActiveQuestSummary } from '@/components/game/XMBMenu';
+import { tasksDueToday, type TaskFrequency } from '@/lib/quests';
 
 export const metadata = {
   title: 'Menu principal',
@@ -36,7 +37,13 @@ export default async function GameMenuPage() {
     await Promise.all([
       supabase
         .from('user_quests')
-        .select('id, progress_pct, quest:quests!inner(id, title, type)')
+        .select(`
+          id, progress_pct, started_at,
+          quest:quests!inner(
+            id, title, type, duration_days,
+            objectives ( id, tasks (id, frequency_days, is_optional) )
+          )
+        `)
         .eq('user_id', user!.id)
         .eq('status', 'active')
         .eq('quest.type', 'main')
@@ -67,11 +74,40 @@ export default async function GameMenuPage() {
       .eq('user_id', user!.id),
   ]);
 
+  let tasksDueTodayCount = 0;
+  if (activeMainQuest) {
+    const allTasks = (activeMainQuest.quest.objectives ?? []).flatMap(
+      (o) => (o.tasks ?? []) as TaskFrequency[],
+    );
+    if (allTasks.length > 0) {
+      const { data: completions } = await supabase
+        .from('user_tasks')
+        .select('task_id, completed_date')
+        .eq('user_id', user!.id)
+        .eq('user_quest_id', activeMainQuest.id);
+      const completionsByTask = new Map<string, string[]>();
+      for (const c of completions ?? []) {
+        const arr = completionsByTask.get(c.task_id) ?? [];
+        arr.push(c.completed_date);
+        completionsByTask.set(c.task_id, arr);
+      }
+      tasksDueTodayCount = tasksDueToday(
+        allTasks.map((t) => ({
+          task: t,
+          completionDates: completionsByTask.get(t.id) ?? [],
+        })),
+        new Date(activeMainQuest.started_at),
+        activeMainQuest.quest.duration_days,
+      ).length;
+    }
+  }
+
   const activeQuest: ActiveQuestSummary | null = activeMainQuest
     ? {
         id: activeMainQuest.id,
         title: activeMainQuest.quest.title,
         progressPct: activeMainQuest.progress_pct,
+        tasksDueTodayCount,
       }
     : null;
 

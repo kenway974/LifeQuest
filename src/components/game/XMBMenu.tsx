@@ -24,6 +24,8 @@ export interface ActiveQuestSummary {
   id: string;
   title: string;
   progressPct: number;
+  /** Number of tasks scheduled today that aren't done yet. */
+  tasksDueTodayCount: number;
 }
 
 interface XMBItem {
@@ -49,10 +51,17 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
   const adventureItems: XMBItem[] = [];
 
   if (activeQuest) {
+    const dueCount = activeQuest.tasksDueTodayCount;
+    const dueLabel =
+      dueCount === 0
+        ? '✓ Tout fait pour aujourd’hui'
+        : dueCount === 1
+          ? '1 tâche à faire aujourd’hui'
+          : `${dueCount} tâches à faire aujourd’hui`;
     adventureItems.push({
       id: 'continue',
       label: 'Continuer l’aventure',
-      description: activeQuest.title,
+      description: `${activeQuest.title} — ${dueLabel}`,
       href: `/game/quest/${activeQuest.id}`,
       icon: PlayCircle,
       progressPct: activeQuest.progressPct,

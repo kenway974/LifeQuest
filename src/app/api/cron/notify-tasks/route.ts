@@ -30,11 +30,18 @@ function getEnv(name: string): string | null {
 
 export async function GET(req: NextRequest) {
   const expected = getEnv('CRON_SECRET');
-  if (expected) {
-    const auth = req.headers.get('authorization');
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!expected) {
+    // Fail-closed: refuse to run if the secret is not configured.
+    // Otherwise anyone hitting this endpoint could spam push notifications.
+    console.error('CRON_SECRET env var missing — refusing to run cron.');
+    return NextResponse.json(
+      { error: 'CRON_SECRET not configured server-side' },
+      { status: 500 },
+    );
+  }
+  const auth = req.headers.get('authorization');
+  if (auth !== `Bearer ${expected}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL');

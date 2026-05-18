@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "db:types": "node scripts/gen-db-types.mjs",
     "db:seed": "tsx scripts/seed.ts",
-    "db:seed:add": "tsx scripts/seed-additive.ts"
+    "db:seed:add": "tsx scripts/seed-additive.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/ssr": "0.5.2",
@@ -51,6 +53,7 @@
     "prettier-plugin-tailwindcss": "0.6.9",
     "tailwindcss": "^4.3.0",
     "tsx": "4.19.2",
-    "typescript": "5.7.2"
+    "typescript": "5.7.2",
+    "vitest": "^2.1.9"
   }
 }
