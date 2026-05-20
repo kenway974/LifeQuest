@@ -38,3 +38,16 @@ next-env.d.ts
 # Supabase local
 supabase/.branches
 supabase/.temp
+
+# Vitest coverage
+coverage/
+
+# Claude Code
+# Temporary worktrees created by the agent — never commit
+.claude/worktrees/
+# Personal/local settings (machine-specific overrides) — keep out of git
+.claude/settings.local.json
+# Session scratch data
+.claude/.session*
+.claude/todos/
+# NOTE: .claude/settings.json IS committed on purpose (shared project config)
