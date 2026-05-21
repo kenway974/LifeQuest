@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { QuestCard } from '@/components/game/QuestCard';
 import { ArrowLeft } from 'lucide-react';
+import { getCatalogImpacts } from '@/lib/character-stats-meta';
+import type { StatKey } from '@/lib/character-stats';
+import { QuestStatFilter, type QuestWithStats } from '@/components/game/QuestStatFilter';
 
 export const metadata = { title: 'Quêtes principales' };
 
@@ -11,10 +13,10 @@ export default async function MainQuestsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Catalog quests
+  // Catalog quests — include objectives so we can compute stat keys
   const { data: quests } = await supabase
     .from('quests')
-    .select('id, title, description, difficulty, duration_days, xp_reward, icon')
+    .select('id, title, description, difficulty, duration_days, xp_reward, icon, objectives(id, title)')
     .eq('type', 'main')
     .eq('is_published', true)
     .order('difficulty', { ascending: true });
@@ -27,6 +29,27 @@ export default async function MainQuestsPage() {
     .in('status', ['active']);
 
   const activeIds = new Set(activeQuests?.map((q) => q.quest_id));
+
+  // Compute which stats each quest impacts
+  const questsWithStats: QuestWithStats[] = (quests ?? []).map((quest) => {
+    const statKeySet = new Set<StatKey>();
+    for (const obj of quest.objectives ?? []) {
+      const impacts = getCatalogImpacts(obj.title);
+      for (const key of Object.keys(impacts) as StatKey[]) {
+        statKeySet.add(key);
+      }
+    }
+    return {
+      id: quest.id,
+      title: quest.title,
+      description: quest.description ?? '',
+      difficulty: quest.difficulty,
+      duration_days: quest.duration_days,
+      xp_reward: quest.xp_reward,
+      icon: quest.icon,
+      statKeys: Array.from(statKeySet),
+    };
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
@@ -44,20 +67,12 @@ export default async function MainQuestsPage() {
         Parcours de transformation de 30 à 90 jours. Choisis une seule quête principale à la fois.
       </p>
 
-      {!quests || quests.length === 0 ? (
+      {questsWithStats.length === 0 ? (
         <p className="text-[color:var(--color-text-muted)]">
           Aucune quête principale disponible pour le moment.
         </p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {quests.map((quest) => (
-            <QuestCard
-              key={quest.id}
-              quest={quest}
-              isActive={activeIds.has(quest.id)}
-            />
-          ))}
-        </div>
+        <QuestStatFilter quests={questsWithStats} activeIds={activeIds} />
       )}
     </div>
   );
