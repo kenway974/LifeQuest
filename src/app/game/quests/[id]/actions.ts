@@ -7,8 +7,8 @@ import { createClient } from '@/lib/supabase/server';
 /**
  * Start a quest for the current user.
  * Enforces the business rules:
- *  - max 1 active main quest at a time
- *  - max 3 active secondary quests if no main, else 1
+ *  - max 2 active main quests at a time
+ *  - secondary slots: 5 (0 main) / 3 (1 main) / 0 (2 main)
  *  - custom quests require has_custom_quests = true
  *
  * Always redirects (no return value). On failure, redirects back to the quest
@@ -38,17 +38,22 @@ export async function startQuestAction(questId: string): Promise<void> {
     .eq('user_id', user.id)
     .eq('status', 'active');
 
-  const hasMain = actives?.some((q) => q.quest.type === 'main') ?? false;
+  const mainCount = actives?.filter((q) => q.quest.type === 'main').length ?? 0;
   const secondaryCount = actives?.filter((q) => q.quest.type === 'secondary').length ?? 0;
 
-  if (quest!.type === 'main' && hasMain) {
-    fail('Tu suis déjà une quête principale. Termine-la ou abandonne-la.');
+  if (quest!.type === 'main' && mainCount >= 2) {
+    fail('Tu as déjà 2 quêtes principales actives (maximum).');
   }
 
   if (quest!.type === 'secondary') {
-    const maxAllowed = hasMain ? 1 : 3;
-    if (secondaryCount >= maxAllowed) {
-      fail(`Limite atteinte (${maxAllowed} quêtes secondaires max).`);
+    // secondary slots: [5, 3, 0] depending on mainCount
+    const maxSecondary = mainCount === 0 ? 5 : mainCount === 1 ? 3 : 0;
+    if (secondaryCount >= maxSecondary) {
+      if (maxSecondary === 0) {
+        fail('Impossible d\'ajouter une quête secondaire avec 2 quêtes principales actives.');
+      } else {
+        fail(`Limite atteinte (${maxSecondary} quêtes secondaires max avec ${mainCount} quête${mainCount > 1 ? 's' : ''} principale${mainCount > 1 ? 's' : ''}).`);
+      }
     }
   }
 
