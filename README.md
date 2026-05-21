@@ -1,7 +1,7 @@
 # LifeQuest
 
 > Application web gamifiée de développement personnel.
-> Transforme tes objectifs réels en quêtes RPG : XP, niveaux, trophées, séries.
+> Transforme tes objectifs réels en quêtes RPG : XP, niveaux, trophées, séries, caractéristiques.
 
 ![Stack](https://img.shields.io/badge/Next.js-16.2-black) ![React](https://img.shields.io/badge/React-19.2-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-4.0-cyan) ![Supabase](https://img.shields.io/badge/Supabase-Postgres-green) ![License](https://img.shields.io/badge/license-MIT-purple)
 
@@ -15,10 +15,13 @@ LifeQuest transforme ton développement personnel en aventure immersive façon j
 - **Quêtes secondaires** (7-30 jours) en parallèle pour rester flexible
 - **Quêtes personnalisées** (premium 2€ à vie) pour créer tes propres défis
 - **Système XP & niveaux** : chaque tâche validée fait progresser
+- **9 caractéristiques RPG** : Force, Cardio, Endurance, Focus, Discipline, Calme, Émotion, Créativité, Social — évoluent selon les quêtes complétées
 - **Trophées** avec rareté Fortnite (Facile → Légendaire) à débloquer
+- **Tâches facultatives** récompensées en étoiles pour aller au-delà
 - **Statistiques temps réel** : streaks, taux de complétion, historique
-- **Notifications push** pour des rappels personnalisés
-- **Personnalisation** : fond d'écran, ambiance
+- **Recommandations de quêtes** selon ton profil et contexte
+- **Notifications push** avec cron quotidien pour des rappels personnalisés
+- **Multi-thèmes** : fond d'écran, thème adaptatif, couleur d'accent au choix
 
 ---
 
@@ -27,9 +30,12 @@ LifeQuest transforme ton développement personnel en aventure immersive façon j
 - **Framework** : [Next.js 16.2](https://nextjs.org) (App Router, Server Components, Server Actions)
 - **Langage** : TypeScript en mode strict
 - **UI** : React 19.2 + [Tailwind CSS 4.0](https://tailwindcss.com) + [lucide-react](https://lucide.dev) + [Framer Motion](https://www.framer.com/motion)
+- **État global** : [Zustand](https://zustand-demo.pmnd.rs)
+- **Data fetching** : [TanStack Query](https://tanstack.com/query)
 - **Auth + DB + Storage** : [Supabase](https://supabase.com) (PostgreSQL + Row Level Security)
 - **Paiements** : [Stripe Checkout](https://stripe.com) (paiement unique 2€)
-- **Notifications** : Web Push (VAPID) + Service Worker
+- **Notifications** : Web Push (VAPID) + Service Worker + cron Vercel
+- **Tests** : [Vitest](https://vitest.dev)
 - **Hébergement** : [Vercel](https://vercel.com) (recommandé)
 
 ---
@@ -52,7 +58,15 @@ npm install
 ### 2. Configurer Supabase
 
 1. Crée un nouveau projet sur [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Va dans **SQL Editor** et exécute le contenu de `supabase/migrations/0001_init.sql`.
+2. Va dans **SQL Editor** et exécute **dans l'ordre** toutes les migrations du dossier `supabase/migrations/` :
+   - `0001_init.sql` — Schéma complet + RLS + triggers
+   - `0002_storage_user_backgrounds.sql` — Bucket Storage pour les fonds
+   - `0003_user_settings_theme.sql` — Colonnes thème/accent
+   - `0004_tasks_frequency.sql` — Fréquence des tâches
+   - `0005_character_stats.sql` — 9 caractéristiques RPG
+   - `0006_stats_visibility.sql` — Profil public / privé
+   - `0007_optional_tasks_stars.sql` — Tâches facultatives + étoiles
+   - `0008_objective_daily_completions.sql` — Historique journalier
 3. Récupère depuis **Settings → API** :
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -94,6 +108,11 @@ npm run db:seed
 
 Cela ajoute ~15 quêtes principales, ~20 quêtes secondaires et 30 trophées au catalogue.
 
+> Pour ajouter du contenu **sans écraser** les données existantes (utile en prod) :
+> ```bash
+> npm run db:seed:add
+> ```
+
 ### 7. Démarrer le serveur de développement
 
 ```bash
@@ -108,14 +127,17 @@ Ouvre [http://localhost:3000](http://localhost:3000) — 🎮 GG !
 
 | Commande | Description |
 |---|---|
-| `npm run dev` | Serveur de dev (Turbopack, hot reload) |
+| `npm run dev` | Serveur de dev (hot reload) |
 | `npm run build` | Build de production |
 | `npm start` | Lance le serveur en mode production |
 | `npm run lint` | Lint avec ESLint |
 | `npm run typecheck` | Vérifie le typage TypeScript |
 | `npm run format` | Formate tout le code avec Prettier |
 | `npm run db:types` | Régénère les types TypeScript depuis Supabase |
-| `npm run db:seed` | Peuple la DB avec le contenu de départ |
+| `npm run db:seed` | Seed destructif — réinitialise le catalogue |
+| `npm run db:seed:add` | Seed additif — ajoute uniquement le contenu manquant |
+| `npm test` | Lance les tests unitaires (Vitest) |
+| `npm run test:watch` | Tests en mode watch |
 
 ---
 
@@ -123,39 +145,69 @@ Ouvre [http://localhost:3000](http://localhost:3000) — 🎮 GG !
 
 ```
 lifequest/
-├── public/                       # Assets statiques (favicon, sw.js, manifest)
+├── public/                         # Assets statiques (favicon, sw.js, manifest)
 ├── scripts/
-│   └── seed.ts                   # Script de peuplement de la DB
+│   ├── seed.ts                     # Seed destructif (reset catalogue)
+│   └── seed-additive.ts            # Seed non-destructif (préserve la prod)
 ├── src/
-│   ├── app/                      # Routes Next.js App Router
-│   │   ├── (public)              # Landing, login, signup, légal
-│   │   ├── game/                 # App protégée (auth requise)
-│   │   │   ├── page.tsx          # Menu principal RPG
-│   │   │   ├── quests/           # Liste & démarrage des quêtes
-│   │   │   ├── quest/[id]/       # Tracking quête active
-│   │   │   ├── stats/            # Statistiques utilisateur
-│   │   │   ├── trophies/         # Salle des trophées
-│   │   │   ├── profile/          # Profil + recherche joueur
-│   │   │   ├── customize/        # Personnalisation fond
-│   │   │   └── settings/         # Paramètres + push
+│   ├── app/                        # Routes Next.js App Router
+│   │   ├── (public)/               # Landing, login, signup, légal
+│   │   ├── game/                   # App protégée (auth requise)
+│   │   │   ├── page.tsx            # Menu principal (navigation XMB)
+│   │   │   ├── character/          # Feuille de personnage + questionnaire baseline
+│   │   │   ├── quests/             # Catalogue & démarrage des quêtes
+│   │   │   ├── quest/[id]/         # Tracking quête active
+│   │   │   ├── stats/              # Statistiques utilisateur
+│   │   │   ├── trophies/           # Salle des trophées
+│   │   │   ├── player/[pseudo]/    # Profil public d'un autre joueur
+│   │   │   ├── profile/            # Mon profil + recherche joueur
+│   │   │   ├── customize/          # Personnalisation fond + thème
+│   │   │   └── settings/           # Paramètres + notifications push
 │   │   └── api/
-│   │       ├── stripe/           # Checkout + webhook
-│   │       └── push/             # Inscription notifications
+│   │       ├── stripe/             # Checkout + webhook
+│   │       ├── push/               # Inscription notifications
+│   │       └── cron/               # Cron Vercel — envoi push quotidien
 │   ├── components/
-│   │   └── game/                 # Composants spécifiques au jeu
+│   │   ├── character/              # RadarChart des 9 stats RPG
+│   │   ├── game/                   # Composants UI du jeu (XMBMenu, QuestCard…)
+│   │   └── ui/                     # Composants génériques (Toast…)
 │   ├── lib/
-│   │   ├── env.ts                # Variables d'env typées (Zod)
-│   │   ├── supabase/             # Clients (browser/server/admin)
-│   │   └── utils.ts              # XP/level/difficulty helpers
+│   │   ├── character-stats.ts      # Définition des 9 stats (clés, labels, couleurs)
+│   │   ├── character-stats-meta.ts # Impacts stats par objectif du catalogue
+│   │   ├── quests-discover.ts      # Moteur de recommandation de quêtes
+│   │   ├── quests.ts               # Logique quêtes (occurrences, tâches du jour)
+│   │   ├── env.ts                  # Variables d'env typées (Zod)
+│   │   ├── theme/                  # Extraction couleur d'accent depuis fond d'écran
+│   │   └── supabase/               # Clients (browser/server/admin)
 │   ├── styles/
-│   │   └── globals.css           # Design system néon
+│   │   └── globals.css             # Design system néon
 │   └── types/
-│       └── database.ts           # Types DB Supabase
+│       └── database.ts             # Types DB Supabase
 ├── supabase/
-│   └── migrations/0001_init.sql  # Schéma DB complet + RLS
-├── middleware.ts                 # Refresh session + protection /game
-└── next.config.mjs               # Security headers + CSP
+│   └── migrations/                 # 8 migrations SQL (0001 → 0008)
+├── middleware.ts                   # Refresh session + protection /game
+└── next.config.mjs                 # Security headers + CSP
 ```
+
+---
+
+## ⚔️ Caractéristiques RPG
+
+À la première connexion, l'utilisateur remplit un **questionnaire baseline** (10 questions) qui initialise ses 9 stats de départ. Chaque quête complétée (ou ratée) fait évoluer ces statistiques, affichées sur un **RadarChart** dans la feuille de personnage (`/game/character`).
+
+| Stat | Description |
+|---|---|
+| Force | Puissance physique |
+| Cardio | Endurance cardiovasculaire |
+| Endurance | Effort dans la durée |
+| Focus | Concentration et clarté mentale |
+| Discipline | Constance et rigueur |
+| Calme | Gestion du stress |
+| Émotion | Intelligence émotionnelle |
+| Créativité | Expression et imagination |
+| Social | Aisance relationnelle |
+
+Les stats sont plafonnées à **110** (le sur-cap est atteignable via les tâches facultatives). Les objectifs du catalogue contribuent à des stats précises définies dans `lib/character-stats-meta.ts`.
 
 ---
 
@@ -175,6 +227,7 @@ C'est le combo le plus rapide et le moins cher (gratuit jusqu'à plusieurs milli
    - Évents : `checkout.session.completed`
    - Copie le `Signing secret` dans Vercel → `STRIPE_WEBHOOK_SECRET`
 6. Dans Supabase → **Authentication → URL Configuration** : ajoute ton domaine prod dans les redirect URLs.
+7. Le cron de notifications (`/api/cron/notify-tasks`) est déclenché une fois par jour via `vercel.json` — aucune config supplémentaire nécessaire.
 
 ### Option 2 — Alternative auto-hébergement
 
@@ -184,7 +237,7 @@ Le projet fonctionne aussi sur :
 - **Render** (Web Service + Postgres add-on)
 - **VPS classique** avec PM2 + Nginx reverse proxy
 
-Dans ces cas, garde Supabase pour l'auth/DB ou migre vers Postgres + NextAuth (le code est compatible).
+Dans ces cas, garde Supabase pour l'auth/DB ou migre vers Postgres + NextAuth (le code est compatible). Le cron devra être planifié manuellement (crontab, GitHub Actions…).
 
 ---
 
@@ -196,8 +249,9 @@ Quelques points importants déjà gérés par le projet :
 - ✅ **Headers de sécurité** : CSP, HSTS, X-Frame-Options, Referrer-Policy
 - ✅ **Validation côté serveur** : tous les formulaires passent par Zod
 - ✅ **Webhooks Stripe** : signature vérifiée côté serveur
-- ✅ **Service role key** : utilisée uniquement côté serveur (webhooks, seeds)
+- ✅ **Service role key** : utilisée uniquement côté serveur (webhooks, seeds, cron)
 - ✅ **Pas de secrets** dans le code ou les commits (`.env.local` ignoré)
+- ✅ **Profil public/privé** : les stats ne sont visibles par d'autres joueurs que si `stats_public = true`
 
 À ajouter avant la prod :
 - ⚠️ Rate limiting sur les routes API publiques (Upstash Ratelimit recommandé)
@@ -208,22 +262,25 @@ Quelques points importants déjà gérés par le projet :
 
 ## 📋 Roadmap & TODO
 
-### MVP livré
+### Fonctionnalités livrées
 - [x] Authentification (email/password + Google OAuth)
-- [x] Schéma DB complet avec RLS
+- [x] Schéma DB complet avec RLS (8 migrations)
 - [x] Quêtes principales / secondaires / personnalisées
 - [x] Système XP + niveaux + progression
 - [x] 30 trophées avec rareté
 - [x] Statistiques + streak
-- [x] Notifications push (VAPID)
+- [x] 9 caractéristiques RPG avec RadarChart
+- [x] Tâches facultatives récompensées en étoiles
+- [x] Système de recommandation de quêtes
+- [x] Notifications push (VAPID) + cron quotidien
 - [x] Paiement Stripe 2€ à vie
+- [x] Multi-thèmes (adaptatif + couleur d'accent)
 - [x] Personnalisation fond d'écran
-- [x] Recherche joueur par pseudo
+- [x] Profil public joueur (`/game/player/[pseudo]`)
 - [x] Mode hors-ligne basique (Service Worker)
 
 ### Améliorations recommandées (TODO dans le code)
 - [ ] Upload de médias vers Supabase Storage (form Customize)
-- [ ] Cron job pour envoyer les push notifs à l'heure définie
 - [ ] Détection des streaks 7/30/60/100 jours (trophées)
 - [ ] Page admin pour gérer le catalogue de quêtes
 - [ ] Animations Framer Motion sur les transitions/level-ups
@@ -234,7 +291,6 @@ Quelques points importants déjà gérés par le projet :
 - [ ] Système d'amis + guildes
 - [ ] Défis communautaires
 - [ ] Boutique de cosmétiques
-- [ ] IA pour recommander des quêtes personnalisées
 - [ ] Événements temporaires saisonniers
 - [ ] i18n (anglais en priorité)
 
@@ -244,11 +300,13 @@ Quelques points importants déjà gérés par le projet :
 
 **"Invalid environment variables"** au démarrage → vérifie que tu as bien copié `.env.example` en `.env.local` et rempli toutes les variables marquées requises.
 
-**"PGRST116" / RLS errors** → assure-toi d'avoir bien exécuté `0001_init.sql` dans Supabase. Vérifie aussi que le trigger `on_auth_user_created` est bien créé.
+**"PGRST116" / RLS errors** → assure-toi d'avoir exécuté **toutes** les migrations (0001 à 0008) dans Supabase. Vérifie aussi que le trigger `on_auth_user_created` est bien créé.
 
 **Le webhook Stripe ne se déclenche pas en local** → utilise `stripe listen --forward-to localhost:3000/api/stripe/webhook`. En prod, vérifie que l'endpoint est bien configuré dans le dashboard Stripe.
 
 **Les notifications push ne marchent pas** → vérifie que `NEXT_PUBLIC_VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` sont bien définies, et que le navigateur supporte les push (Safari iOS < 16.4 ne supporte pas).
+
+**La feuille de personnage redirige en boucle** → l'utilisateur est redirigé vers `/game/character` tant que `stats_initialized = false` dans `profiles`. Lance le questionnaire baseline pour initialiser les stats.
 
 ---
 
@@ -259,5 +317,3 @@ MIT — voir [LICENSE](./LICENSE).
 ---
 
 Made with ⚡ and ✨ for adventurers who refuse the default difficulty.
-#   L i f e Q u e s t  
- 
