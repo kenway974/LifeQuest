@@ -166,13 +166,27 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
   ];
 }
 
+export interface MobileActiveQuest {
+  id: string;
+  title: string;
+  type: 'main' | 'secondary' | 'custom';
+  progressPct: number;
+  tasksDueTodayCount: number;
+}
+
 interface XMBMenuProps {
   activeQuest: ActiveQuestSummary | null;
+  mobileActiveQuests?: MobileActiveQuest[];
   mobileProfile?: MobileProfileData | null;
   mobileSystem?: MobileSystemData | null;
 }
 
-export function XMBMenu({ activeQuest, mobileProfile, mobileSystem }: XMBMenuProps) {
+export function XMBMenu({
+  activeQuest,
+  mobileActiveQuests = [],
+  mobileProfile,
+  mobileSystem,
+}: XMBMenuProps) {
   const categories = useMemo(() => buildCategories(activeQuest), [activeQuest]);
   const router = useRouter();
   const [catIdx, setCatIdx] = useState(0);
@@ -367,6 +381,7 @@ export function XMBMenu({ activeQuest, mobileProfile, mobileSystem }: XMBMenuPro
       <div className="md:hidden">
         <MobileGrid
           categories={categories}
+          mobileActiveQuests={mobileActiveQuests}
           mobileProfile={mobileProfile ?? null}
           mobileSystem={mobileSystem ?? null}
         />
@@ -377,10 +392,12 @@ export function XMBMenu({ activeQuest, mobileProfile, mobileSystem }: XMBMenuPro
 
 function MobileGrid({
   categories,
+  mobileActiveQuests,
   mobileProfile,
   mobileSystem,
 }: {
   categories: XMBCategory[];
+  mobileActiveQuests: MobileActiveQuest[];
   mobileProfile: MobileProfileData | null;
   mobileSystem: MobileSystemData | null;
 }) {
@@ -394,6 +411,8 @@ function MobileGrid({
       : active.id === 'system' && mobileSystem
         ? <MobileSystemPanel data={mobileSystem} />
         : null;
+
+  const showActiveQuests = active.id === 'adventure' && mobileActiveQuests.length > 0;
 
   return (
     <>
@@ -417,36 +436,59 @@ function MobileGrid({
         </header>
 
         {embedded ?? (
-          <div className="space-y-3">
-            {active.items.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className="card-neon flex items-center gap-4 p-4 transition-transform active:scale-[0.98]"
-                >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-cyan">
-                    <Icon className="h-6 w-6" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-base font-bold">{item.label}</p>
-                    <p className="text-xs text-[color:var(--color-text-muted)]">{item.description}</p>
-                    {item.progressPct !== undefined && (
-                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
-                        <div
-                          className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
-                          style={{ width: `${item.progressPct}%` }}
-                        />
+          <div className="space-y-5">
+            {/* In-progress quests pinned at the top of the Aventure tab */}
+            {showActiveQuests && (
+              <section>
+                <h2 className="mb-2 font-display text-xs font-bold uppercase tracking-widest text-[color:var(--color-text-muted)]">
+                  En cours ({mobileActiveQuests.length})
+                </h2>
+                <div className="space-y-2">
+                  {mobileActiveQuests.map((q) => (
+                    <ActiveQuestCard key={q.id} quest={q} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="space-y-3">
+              {showActiveQuests && (
+                <h2 className="font-display text-xs font-bold uppercase tracking-widest text-[color:var(--color-text-muted)]">
+                  Explorer
+                </h2>
+              )}
+              {active.items
+                .filter((item) => item.id !== 'continue')
+                .map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="card-neon flex items-center gap-4 p-4 transition-transform active:scale-[0.98]"
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-cyan">
+                        <Icon className="h-6 w-6" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-base font-bold">{item.label}</p>
+                        <p className="text-xs text-[color:var(--color-text-muted)]">{item.description}</p>
+                        {item.progressPct !== undefined && (
+                          <div className="mt-2 h-1 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
+                            <div
+                              className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
+                              style={{ width: `${item.progressPct}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <span className="font-display text-xs uppercase tracking-widest text-[color:var(--color-neon-cyan)]">
-                    ›
-                  </span>
-                </Link>
-              );
-            })}
+                      <span className="font-display text-xs uppercase tracking-widest text-[color:var(--color-neon-cyan)]">
+                        ›
+                      </span>
+                    </Link>
+                  );
+                })}
+            </section>
           </div>
         )}
       </div>
@@ -496,5 +538,62 @@ function MobileGrid({
         </ul>
       </nav>
     </>
+  );
+}
+
+const QUEST_TYPE_META: Record<
+  MobileActiveQuest['type'],
+  { label: string; Icon: LucideIcon }
+> = {
+  main: { label: 'Principale', Icon: Sword },
+  secondary: { label: 'Secondaire', Icon: Compass },
+  custom: { label: 'Personnalisée', Icon: Sparkles },
+};
+
+function ActiveQuestCard({ quest }: { quest: MobileActiveQuest }) {
+  const meta = QUEST_TYPE_META[quest.type];
+  const Icon = meta.Icon;
+  const due = quest.tasksDueTodayCount;
+  return (
+    <Link
+      href={`/game/quest/${quest.id}`}
+      className="card-neon block p-4 transition-transform active:scale-[0.98]"
+    >
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-bg-elevated)] text-glow-violet">
+          <Icon className="h-6 w-6" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--color-text-muted)]">
+            {meta.label}
+          </p>
+          <p className="truncate font-display text-base font-bold">{quest.title}</p>
+        </div>
+        <span className="font-mono text-sm text-[color:var(--color-text-secondary)]">
+          {quest.progressPct}%
+        </span>
+      </div>
+
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[color:var(--color-bg-elevated)]">
+        <div
+          className="h-full bg-gradient-to-r from-[color:var(--color-neon-violet)] to-[color:var(--color-neon-cyan)]"
+          style={{ width: `${quest.progressPct}%` }}
+        />
+      </div>
+
+      <p
+        className={`mt-2 text-xs font-semibold ${
+          due === 0
+            ? 'text-[color:var(--color-difficulty-easy)]'
+            : 'text-glow-cyan'
+        }`}
+      >
+        {due === 0
+          ? '✓ Tout fait pour aujourd’hui'
+          : due === 1
+            ? '1 tâche à faire aujourd’hui'
+            : `${due} tâches à faire aujourd’hui`}
+      </p>
+    </Link>
   );
 }

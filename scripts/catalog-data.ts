@@ -766,6 +766,180 @@ export const MAIN_QUESTS: QuestSeed[] = [
       },
     ],
   },
+
+  {
+    title: 'Devenir plus altruiste',
+    description: '30 jours pour sortir de soi : donner, écouter vraiment, et faire du bien autour de toi.',
+    type: 'main',
+    difficulty: 'medium',
+    duration_days: 30,
+    xp_reward: 1400,
+    objectives: [
+      {
+        title: 'Donner sans rien attendre',
+        description: 'La générosité gratuite, sans calcul.',
+        xp_reward: 250,
+        tasks: [
+          { title: 'Faire 1 bonne action discrète', xp_reward: 25 },
+          { title: 'Aider concrètement un proche', xp_reward: 30, frequency_days: 2 },
+          { title: 'Faire un don (temps, argent, objet)', xp_reward: 80, frequency_days: 14 },
+          { title: 'Rendre service à un inconnu', xp_reward: 25, is_optional: true, frequency_days: 3 },
+        ],
+      },
+      {
+        title: 'Écouter vraiment',
+        description: 'Offrir une attention pleine, sans attendre son tour de parler.',
+        xp_reward: 250,
+        tasks: [
+          { title: 'Écouter quelqu’un sans l’interrompre', xp_reward: 20 },
+          { title: 'Poser une vraie question et creuser', xp_reward: 20 },
+          { title: 'Reformuler ce que l’autre ressent', xp_reward: 15, is_optional: true },
+        ],
+      },
+      {
+        title: 'Gratitude tournée vers l’autre',
+        description: 'Reconnaître ce que les autres t’apportent.',
+        xp_reward: 200,
+        tasks: [
+          { title: 'Remercier sincèrement 1 personne', xp_reward: 20 },
+          { title: 'Complimenter quelqu’un honnêtement', xp_reward: 15, is_optional: true },
+        ],
+      },
+    ],
+  },
+
+  {
+    title: 'Reprendre le contrôle de sa vie amoureuse',
+    description: '45 jours pour affronter tes peurs, clarifier ce que tu veux, et oser être toi-même en relation.',
+    type: 'main',
+    difficulty: 'hard',
+    duration_days: 45,
+    xp_reward: 2200,
+    objectives: [
+      {
+        title: 'Dompter la peur du rejet et du jugement',
+        description: 'Le rejet ne te définit pas. S’y exposer pour le désamorcer.',
+        xp_reward: 400,
+        tasks: [
+          { title: 'Engager une conversation avec un inconnu', xp_reward: 40, frequency_days: 3 },
+          { title: 'Exprimer un désaccord calmement', xp_reward: 30, frequency_days: 2 },
+          { title: 'Noter 1 peur affrontée aujourd’hui', xp_reward: 20 },
+          { title: 'Demander quelque chose qui te fait peur', xp_reward: 50, is_optional: true, frequency_days: 7 },
+        ],
+      },
+      {
+        title: 'Savoir ce que tu veux vivre en relation',
+        description: 'On ne trouve pas ce qu’on n’a jamais défini.',
+        xp_reward: 300,
+        tasks: [
+          { title: 'Écrire ta vision d’une relation idéale', xp_reward: 60, frequency_days: 365 },
+          { title: 'Lister tes valeurs non-négociables', xp_reward: 50, frequency_days: 365 },
+          { title: 'Tirer 1 leçon d’une relation passée', xp_reward: 40, frequency_days: 7 },
+        ],
+      },
+      {
+        title: 'Savoir ce que tu aimes (et fuis) chez une personne',
+        description: 'Clarifier tes attirances et tes limites.',
+        xp_reward: 300,
+        tasks: [
+          { title: 'Lister 5 qualités essentielles chez l’autre', xp_reward: 50, frequency_days: 365 },
+          { title: 'Lister tes dealbreakers absolus', xp_reward: 50, frequency_days: 365 },
+          { title: 'Observer ce qui t’attire vraiment chez les gens', xp_reward: 25, frequency_days: 3 },
+        ],
+      },
+      {
+        title: 'S’exprimer avec authenticité',
+        description: 'Arrêter de jouer un rôle. Être soi, vraiment.',
+        xp_reward: 350,
+        tasks: [
+          { title: 'Dire ce que tu penses vraiment dans 1 échange', xp_reward: 30 },
+          { title: 'Exprimer un compliment ou un ressenti sincère', xp_reward: 25, frequency_days: 2 },
+          { title: 'Partager une vulnérabilité avec quelqu’un de confiance', xp_reward: 50, is_optional: true, frequency_days: 7 },
+        ],
+      },
+    ],
+  },
+
+  {
+    title: 'Réduire son anxiété',
+    description: '30 jours d’outils concrets pour calmer le corps, apaiser le mental et reprendre prise sur l’incertitude.',
+    type: 'main',
+    difficulty: 'medium',
+    duration_days: 30,
+    xp_reward: 1600,
+    objectives: [
+      {
+        title: 'Calmer le corps',
+        description: 'L’anxiété vit d’abord dans le système nerveux.',
+        xp_reward: 300,
+        tasks: [
+          { title: 'Cohérence cardiaque 5 min', xp_reward: 25 },
+          { title: 'Marche au calme 15 min', xp_reward: 20 },
+          { title: 'Limiter caféine / excitants', xp_reward: 15, is_optional: true },
+        ],
+      },
+      {
+        title: 'Apaiser le mental',
+        description: 'Observer les pensées sans s’y noyer.',
+        xp_reward: 300,
+        tasks: [
+          { title: 'Méditation guidée 10 min', xp_reward: 25 },
+          { title: 'Noter 3 pensées anxiogènes + recadrage', xp_reward: 30 },
+          { title: 'Pas d’écran 1h avant le coucher', xp_reward: 20 },
+        ],
+      },
+      {
+        title: 'Reprendre prise sur l’incertitude',
+        description: 'Agir sur ce qui dépend de toi, lâcher le reste.',
+        xp_reward: 250,
+        tasks: [
+          { title: 'Lister ce que tu contrôles vs pas', xp_reward: 40, frequency_days: 7 },
+          { title: 'Planifier les 3 priorités du lendemain', xp_reward: 20 },
+          { title: 'Avancer sur 1 chose que tu repousses', xp_reward: 30, frequency_days: 2 },
+        ],
+      },
+    ],
+  },
+
+  {
+    title: 'Cultiver l’estime de soi',
+    description: '30 jours pour arrêter de te rabaisser et construire une vraie confiance, fondée sur des preuves.',
+    type: 'main',
+    difficulty: 'medium',
+    duration_days: 30,
+    xp_reward: 1500,
+    objectives: [
+      {
+        title: 'Faire taire le juge intérieur',
+        description: 'Repérer et désamorcer l’autocritique automatique.',
+        xp_reward: 250,
+        tasks: [
+          { title: 'Noter 1 pensée auto-critique + la reformuler avec bienveillance', xp_reward: 25 },
+          { title: 'Te parler comme à un ami', xp_reward: 15 },
+        ],
+      },
+      {
+        title: 'Collectionner les preuves',
+        description: 'La confiance se construit sur des faits, pas des humeurs.',
+        xp_reward: 250,
+        tasks: [
+          { title: 'Noter 1 victoire du jour, même minuscule', xp_reward: 20 },
+          { title: 'Tenir une promesse faite à toi-même', xp_reward: 30 },
+          { title: 'Relire tes victoires de la semaine', xp_reward: 30, frequency_days: 7 },
+        ],
+      },
+      {
+        title: 'Poser tes limites',
+        description: 'Te respecter, c’est apprendre à dire non.',
+        xp_reward: 250,
+        tasks: [
+          { title: 'Dire NON à une demande non essentielle', xp_reward: 30, frequency_days: 2 },
+          { title: 'Exprimer un besoin clairement', xp_reward: 25, frequency_days: 3 },
+          { title: 'Refuser une autocomparaison aux autres', xp_reward: 15, is_optional: true },
+        ],
+      },
+    ],
+  },
 ];
 
 // ============================================================

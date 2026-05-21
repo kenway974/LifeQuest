@@ -112,6 +112,27 @@ const CATALOG: Record<string, StatImpactMap> = {
   'Esprit zen': { calme: 6, emotion: 4 },
   'Vie alignée': { discipline: 5, focus: 3 },
 
+  // ===== Devenir plus altruiste =====
+  'Donner sans rien attendre': { social: 5, emotion: 4 },
+  'Écouter vraiment': { social: 6, emotion: 3 },
+  'Gratitude tournée vers l’autre': { emotion: 4, social: 3 },
+
+  // ===== Reprendre le contrôle de sa vie amoureuse =====
+  'Dompter la peur du rejet et du jugement': { emotion: 5, social: 4, discipline: 3 },
+  'Savoir ce que tu veux vivre en relation': { focus: 4, emotion: 3 },
+  'Savoir ce que tu aimes (et fuis) chez une personne': { focus: 4, social: 3 },
+  'S’exprimer avec authenticité': { social: 5, emotion: 4 },
+
+  // ===== Réduire son anxiété =====
+  'Calmer le corps': { calme: 6, emotion: 3 },
+  'Apaiser le mental': { calme: 6, focus: 3 },
+  'Reprendre prise sur l’incertitude': { calme: 4, discipline: 4 },
+
+  // ===== Cultiver l'estime de soi =====
+  'Faire taire le juge intérieur': { emotion: 5, calme: 3 },
+  'Collectionner les preuves': { emotion: 4, discipline: 4 },
+  'Poser tes limites': { social: 4, emotion: 4 },
+
   // ===== Secondary quests =====
   'Conscience verbale': { emotion: 3, discipline: 2 },
   'Reformuler': { emotion: 3, social: 2 },

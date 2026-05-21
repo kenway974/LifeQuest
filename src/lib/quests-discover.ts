@@ -112,6 +112,26 @@ const META: Record<string, QuestMeta> = {
     context: ['challenge'],
     summary: 'Le défi ultime. Corps, mental, esprit, vision — 90 jours sans concession.',
   },
+  'Devenir plus altruiste': {
+    themes: ['social', 'emotions'],
+    context: ['improve'],
+    summary: 'Sortir de soi : donner sans attendre, écouter vraiment, faire du bien autour.',
+  },
+  'Reprendre le contrôle de sa vie amoureuse': {
+    themes: ['social', 'emotions', 'mind'],
+    context: ['reset', 'improve'],
+    summary: 'Dompter la peur du rejet, clarifier ce que tu veux, oser être authentique.',
+  },
+  'Réduire son anxiété': {
+    themes: ['emotions', 'spirituality', 'mind'],
+    context: ['reset'],
+    summary: 'Calmer le corps, apaiser le mental, reprendre prise sur l’incertitude.',
+  },
+  'Cultiver l’estime de soi': {
+    themes: ['emotions', 'mind', 'social'],
+    context: ['improve', 'reset'],
+    summary: 'Faire taire le juge intérieur, collectionner les preuves, poser ses limites.',
+  },
 
   // ===== SECONDARY =====
   '7 jours sans plainte': {

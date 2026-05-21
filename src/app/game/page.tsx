@@ -33,7 +33,7 @@ export default async function GameMenuPage() {
     redirect('/game/character');
   }
 
-  const [{ data: activeMainQuest }, { data: profileFull }, { data: settings }] =
+  const [{ data: activeQuestsRaw }, { data: profileFull }, { data: settings }] =
     await Promise.all([
       supabase
         .from('user_quests')
@@ -46,8 +46,7 @@ export default async function GameMenuPage() {
         `)
         .eq('user_id', user!.id)
         .eq('status', 'active')
-        .eq('quest.type', 'main')
-        .maybeSingle(),
+        .order('started_at', { ascending: true }),
       supabase
         .from('profiles')
         .select('id, pseudo, avatar_url, level, xp, stars, stats_public, created_at')
@@ -74,46 +73,69 @@ export default async function GameMenuPage() {
       .eq('user_id', user!.id),
   ]);
 
-  let tasksDueTodayCount = 0;
-  if (activeMainQuest) {
-    const allTasks = (activeMainQuest.quest.objectives ?? []).flatMap(
-      (o) => (o.tasks ?? []) as TaskFrequency[],
-    );
-    if (allTasks.length > 0) {
-      const { data: completions } = await supabase
+  const activeQuestsList = activeQuestsRaw ?? [];
+
+  // Fetch all completions across active quests in one query, then group
+  const activeQuestIds = activeQuestsList.map((q) => q.id);
+  const { data: allCompletions } = activeQuestIds.length
+    ? await supabase
         .from('user_tasks')
-        .select('task_id, completed_date')
+        .select('task_id, user_quest_id, completed_date')
         .eq('user_id', user!.id)
-        .eq('user_quest_id', activeMainQuest.id);
-      const completionsByTask = new Map<string, string[]>();
-      for (const c of completions ?? []) {
-        const arr = completionsByTask.get(c.task_id) ?? [];
-        arr.push(c.completed_date);
-        completionsByTask.set(c.task_id, arr);
-      }
-      tasksDueTodayCount = tasksDueToday(
-        allTasks.map((t) => ({
-          task: t,
-          completionDates: completionsByTask.get(t.id) ?? [],
-        })),
-        new Date(activeMainQuest.started_at),
-        activeMainQuest.quest.duration_days,
-      ).length;
+        .in('user_quest_id', activeQuestIds)
+    : { data: [] };
+
+  const completionsByQuestTask = new Map<string, Map<string, string[]>>();
+  for (const c of allCompletions ?? []) {
+    let inner = completionsByQuestTask.get(c.user_quest_id);
+    if (!inner) {
+      inner = new Map();
+      completionsByQuestTask.set(c.user_quest_id, inner);
     }
+    const arr = inner.get(c.task_id) ?? [];
+    arr.push(c.completed_date);
+    inner.set(c.task_id, arr);
   }
 
-  const activeQuest: ActiveQuestSummary | null = activeMainQuest
+  function dueTodayFor(uq: (typeof activeQuestsList)[number]): number {
+    const allTasks = (uq.quest.objectives ?? []).flatMap(
+      (o) => (o.tasks ?? []) as TaskFrequency[],
+    );
+    if (allTasks.length === 0) return 0;
+    const byTask = completionsByQuestTask.get(uq.id) ?? new Map<string, string[]>();
+    return tasksDueToday(
+      allTasks.map((t) => ({ task: t, completionDates: byTask.get(t.id) ?? [] })),
+      new Date(uq.started_at),
+      uq.quest.duration_days,
+    ).length;
+  }
+
+  // All active quests for the mobile "Aventure" tab (sorted: most due today first)
+  const mobileActiveQuests = activeQuestsList
+    .map((uq) => ({
+      id: uq.id,
+      title: uq.quest.title,
+      type: uq.quest.type as 'main' | 'secondary' | 'custom',
+      progressPct: uq.progress_pct,
+      tasksDueTodayCount: dueTodayFor(uq),
+    }))
+    .sort((a, b) => b.tasksDueTodayCount - a.tasksDueTodayCount);
+
+  // Desktop "Continuer l'aventure" item still uses the active MAIN quest
+  const mainQuest = activeQuestsList.find((q) => q.quest.type === 'main');
+  const activeQuest: ActiveQuestSummary | null = mainQuest
     ? {
-        id: activeMainQuest.id,
-        title: activeMainQuest.quest.title,
-        progressPct: activeMainQuest.progress_pct,
-        tasksDueTodayCount,
+        id: mainQuest.id,
+        title: mainQuest.quest.title,
+        progressPct: mainQuest.progress_pct,
+        tasksDueTodayCount: dueTodayFor(mainQuest),
       }
     : null;
 
   return (
     <XMBMenu
       activeQuest={activeQuest}
+      mobileActiveQuests={mobileActiveQuests}
       mobileProfile={
         profileFull
           ? {
