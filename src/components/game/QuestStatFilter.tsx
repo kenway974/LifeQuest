@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { STAT_DEFS, type StatKey } from '@/lib/character-stats';
 import { QuestCard } from '@/components/game/QuestCard';
+import { type Difficulty } from '@/lib/utils';
 
 export type QuestWithStats = {
   id: string;
   title: string;
   description: string;
-  difficulty: string;
+  difficulty: Difficulty;
   duration_days: number;
   xp_reward: number;
   icon: string | null;
