@@ -8,15 +8,23 @@ import { createClient } from '@/lib/supabase/server';
  * Start a quest for the current user.
  * Enforces the business rules:
  *  - max 2 active main quests at a time
- *  - secondary slots: 5 (0 main) / 3 (1 main) / 0 (2 main)
+ *  - max 5 secondary if 0 main, 3 secondary if 1 main, 0 secondary if 2 main
  *  - custom quests require has_custom_quests = true
  *
  * Always redirects (no return value). On failure, redirects back to the quest
  * detail page with ?error=<msg> that the page can surface to the user.
  */
-export async function startQuestAction(questId: string): Promise<void> {
+export async function startQuestAction(questId: string, formData: FormData): Promise<void> {
   const fail = (msg: string) =>
     redirect(`/game/quests/${questId}?error=${encodeURIComponent(msg)}`);
+
+  const startWhen = formData.get('start_when');
+  const d = new Date();
+  if (startWhen === 'tomorrow') {
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  d.setUTCHours(0, 0, 0, 0);
+  const startedAt = d.toISOString();
 
   const supabase = await createClient();
   const {
@@ -70,7 +78,7 @@ export async function startQuestAction(questId: string): Promise<void> {
 
   const { data: inserted, error } = await supabase
     .from('user_quests')
-    .insert({ user_id: user.id, quest_id: questId, status: 'active' })
+    .insert({ user_id: user.id, quest_id: questId, status: 'active', started_at: startedAt })
     .select('id')
     .single();
 
