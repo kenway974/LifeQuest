@@ -85,7 +85,50 @@ export default async function QuestDetailPage({
           </span>
         </div>
 
-        <form action={startQuestAction.bind(null, id)} className="mt-8">
+        <form action={startQuestAction.bind(null, id)} className="mt-8 space-y-5">
+          {/* Start scheduling toggle */}
+          <div>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-[color:var(--color-text-secondary)]">
+              Démarrer les tâches
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="group cursor-pointer">
+                <input
+                  type="radio"
+                  name="start_when"
+                  value="today"
+                  defaultChecked
+                  className="peer sr-only"
+                />
+                <div className="card-neon flex flex-col gap-1 rounded-lg border-2 border-[color:var(--color-border-default)] p-4 transition-all duration-150 peer-checked:border-[#00e5ff] peer-checked:[box-shadow:0_0_12px_rgba(0,229,255,0.35)] hover:border-[#00e5ff]/50">
+                  <span className="font-display text-base font-bold peer-checked:text-[#00e5ff] group-has-[:checked]:text-[#00e5ff]">
+                    Aujourd&apos;hui
+                  </span>
+                  <span className="text-xs text-[color:var(--color-text-secondary)]">
+                    Les tâches commencent dès aujourd&apos;hui
+                  </span>
+                </div>
+              </label>
+
+              <label className="group cursor-pointer">
+                <input
+                  type="radio"
+                  name="start_when"
+                  value="tomorrow"
+                  className="peer sr-only"
+                />
+                <div className="card-neon flex flex-col gap-1 rounded-lg border-2 border-[color:var(--color-border-default)] p-4 transition-all duration-150 peer-checked:border-[#00e5ff] peer-checked:[box-shadow:0_0_12px_rgba(0,229,255,0.35)] hover:border-[#00e5ff]/50">
+                  <span className="font-display text-base font-bold">
+                    Demain
+                  </span>
+                  <span className="text-xs text-[color:var(--color-text-secondary)]">
+                    Les tâches commencent demain matin
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <button type="submit" className="btn-neon inline-flex items-center gap-2 rounded-md px-8 py-4">
             <Play className="h-5 w-5" />
             Démarrer cette quête
