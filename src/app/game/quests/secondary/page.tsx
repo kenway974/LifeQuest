@@ -27,9 +27,9 @@ export default async function SecondaryQuestsPage() {
     .eq(‘status’, ‘active’);
 
   const activeIds = new Set(activeQuests?.map((q) => q.quest_id));
-  const hasActiveMain = activeQuests?.some((q) => q.quest.type === ‘main’) ?? false;
-  const activeSecondaryCount = activeQuests?.filter((q) => q.quest.type === ‘secondary’).length ?? 0;
-  const maxAllowed = hasActiveMain ? 1 : 3;
+  const mainCount = activeQuests?.filter((q) => q.quest.type === 'main').length ?? 0;
+  const activeSecondaryCount = activeQuests?.filter((q) => q.quest.type === 'secondary').length ?? 0;
+  const maxAllowed = mainCount === 0 ? 5 : mainCount === 1 ? 3 : 0;
 
   const isAtLimit = activeSecondaryCount >= maxAllowed;
 
@@ -76,7 +76,7 @@ export default async function SecondaryQuestsPage() {
       </p>
       <p className="mb-8 text-sm text-[color:var(--color-text-muted)]">
         Quêtes actives : <span className="text-glow-cyan font-bold">{activeSecondaryCount}/{maxAllowed}</span>
-        {hasActiveMain && ‘ (limité car tu suis déjà une quête principale)’}
+        {mainCount > 0 && ` (${mainCount} quête${mainCount > 1 ? 's' : ''} principale${mainCount > 1 ? 's' : ''} active${mainCount > 1 ? 's' : ''})`}
       </p>
 
       {questsWithStats.length === 0 ? (
@@ -84,11 +84,16 @@ export default async function SecondaryQuestsPage() {
           Aucune quête secondaire disponible.
         </p>
       ) : (
-        <QuestStatFilter
-          quests={questsWithStats}
-          activeIds={activeIds}
-          disabledIds={disabledIds}
-        />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {quests.map((quest) => (
+            <QuestCard
+              key={quest.id}
+              quest={quest}
+              isActive={activeIds.has(quest.id)}
+              disabled={!activeIds.has(quest.id) && (maxAllowed === 0 || activeSecondaryCount >= maxAllowed)}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
