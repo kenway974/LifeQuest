@@ -1,9 +1,11 @@
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import { QuestCard } from '@/components/game/QuestCard';
-import { ArrowLeft } from 'lucide-react';
+import Link from ‘next/link’;
+import { createClient } from ‘@/lib/supabase/server’;
+import { ArrowLeft } from ‘lucide-react’;
+import { getCatalogImpacts } from ‘@/lib/character-stats-meta’;
+import type { StatKey } from ‘@/lib/character-stats’;
+import { QuestStatFilter, type QuestWithStats } from ‘@/components/game/QuestStatFilter’;
 
-export const metadata = { title: 'Quêtes secondaires' };
+export const metadata = { title: ‘Quêtes secondaires’ };
 
 export default async function SecondaryQuestsPage() {
   const supabase = await createClient();
@@ -12,22 +14,50 @@ export default async function SecondaryQuestsPage() {
   } = await supabase.auth.getUser();
 
   const { data: quests } = await supabase
-    .from('quests')
-    .select('id, title, description, difficulty, duration_days, xp_reward, icon')
-    .eq('type', 'secondary')
-    .eq('is_published', true)
-    .order('difficulty', { ascending: true });
+    .from(‘quests’)
+    .select(‘id, title, description, difficulty, duration_days, xp_reward, icon, objectives(id, title)’)
+    .eq(‘type’, ‘secondary’)
+    .eq(‘is_published’, true)
+    .order(‘difficulty’, { ascending: true });
 
   const { data: activeQuests } = await supabase
-    .from('user_quests')
-    .select('quest_id, quest:quests!inner(type)')
-    .eq('user_id', user!.id)
-    .eq('status', 'active');
+    .from(‘user_quests’)
+    .select(‘quest_id, quest:quests!inner(type)’)
+    .eq(‘user_id’, user!.id)
+    .eq(‘status’, ‘active’);
 
   const activeIds = new Set(activeQuests?.map((q) => q.quest_id));
   const mainCount = activeQuests?.filter((q) => q.quest.type === 'main').length ?? 0;
   const activeSecondaryCount = activeQuests?.filter((q) => q.quest.type === 'secondary').length ?? 0;
   const maxAllowed = mainCount === 0 ? 5 : mainCount === 1 ? 3 : 0;
+
+  const isAtLimit = activeSecondaryCount >= maxAllowed;
+
+  // Compute which stats each quest impacts
+  const questsWithStats: QuestWithStats[] = (quests ?? []).map((quest) => {
+    const statKeySet = new Set<StatKey>();
+    for (const obj of quest.objectives ?? []) {
+      const impacts = getCatalogImpacts(obj.title);
+      for (const key of Object.keys(impacts) as StatKey[]) {
+        statKeySet.add(key);
+      }
+    }
+    return {
+      id: quest.id,
+      title: quest.title,
+      description: quest.description ?? ‘’,
+      difficulty: quest.difficulty,
+      duration_days: quest.duration_days,
+      xp_reward: quest.xp_reward,
+      icon: quest.icon,
+      statKeys: Array.from(statKeySet),
+    };
+  });
+
+  // Quests that are disabled because the user is at the limit (and not already active)
+  const disabledIds = isAtLimit
+    ? new Set(questsWithStats.filter((q) => !activeIds.has(q.id)).map((q) => q.id))
+    : new Set<string>();
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
@@ -49,7 +79,7 @@ export default async function SecondaryQuestsPage() {
         {mainCount > 0 && ` (${mainCount} quête${mainCount > 1 ? 's' : ''} principale${mainCount > 1 ? 's' : ''} active${mainCount > 1 ? 's' : ''})`}
       </p>
 
-      {!quests || quests.length === 0 ? (
+      {questsWithStats.length === 0 ? (
         <p className="text-[color:var(--color-text-muted)]">
           Aucune quête secondaire disponible.
         </p>

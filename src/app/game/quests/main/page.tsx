@@ -52,6 +52,27 @@ export default async function MainQuestsPage() {
     };
   });
 
+  // Compute which stats each quest impacts
+  const questsWithStats: QuestWithStats[] = (quests ?? []).map((quest) => {
+    const statKeySet = new Set<StatKey>();
+    for (const obj of quest.objectives ?? []) {
+      const impacts = getCatalogImpacts(obj.title);
+      for (const key of Object.keys(impacts) as StatKey[]) {
+        statKeySet.add(key);
+      }
+    }
+    return {
+      id: quest.id,
+      title: quest.title,
+      description: quest.description ?? '',
+      difficulty: quest.difficulty,
+      duration_days: quest.duration_days,
+      xp_reward: quest.xp_reward,
+      icon: quest.icon,
+      statKeys: Array.from(statKeySet),
+    };
+  });
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
       <Link
