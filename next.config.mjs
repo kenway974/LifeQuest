@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Vercel's @vercel/next builder computes path.relative(outputFileTracingRoot, ...)
+  // during "Applying modifyConfig". If this is undefined the build crashes with
+  // ERR_INVALID_ARG_TYPE. Pin it explicitly to the project root.
+  outputFileTracingRoot: process.cwd(),
   experimental: {},
   images: {
     remotePatterns: [
