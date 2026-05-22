@@ -4,7 +4,7 @@
   "private": true,
   "description": "Application web gamifiée de développement personnel — transformez votre vie en aventure RPG",
   "engines": {
-    "node": ">=22.0.0"
+    "node": "22.x"
   },
   "scripts": {
     "postinstall": "patch-package",

@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {},
   images: {
     remotePatterns: [
       // Supabase storage (avatars, custom backgrounds)
