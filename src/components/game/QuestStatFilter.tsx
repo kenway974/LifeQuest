@@ -1,3 +1,20 @@
+/**
+ * QuestStatFilter.tsx — Grille de quêtes avec filtre par statistique.
+ *
+ * Permet à l'utilisateur de filtrer les quêtes selon la stat qu'il veut travailler.
+ * Ex : cliquer sur "Discipline" n'affiche que les quêtes qui entraînent la discipline.
+ *
+ * Fonctionnement :
+ *   - `selected` : la stat filtrée (null = afficher tout)
+ *   - Les chips en haut listent uniquement les stats présentes dans au moins une quête
+ *   - La grille en dessous filtre dynamiquement selon `selected`
+ *
+ * `statKeys` : chaque quête reçoit un tableau de StatKey calculé côté serveur
+ *   (en lisant les `stat_impacts` des objectifs de la quête).
+ *
+ * C'est un Client Component car l'état du filtre est interactif.
+ * Les données de quêtes viennent du parent (Server Component) via props.
+ */
 'use client';
 
 import { useState } from 'react';
@@ -5,6 +22,7 @@ import { STAT_DEFS, type StatKey } from '@/lib/character-stats';
 import { QuestCard } from '@/components/game/QuestCard';
 import { type Difficulty } from '@/lib/utils';
 
+// Type étendu d'une quête, enrichi avec la liste des stats qu'elle entraîne
 export type QuestWithStats = {
   id: string;
   title: string;
@@ -13,26 +31,31 @@ export type QuestWithStats = {
   duration_days: number;
   xp_reward: number;
   icon: string | null;
-  statKeys: StatKey[];
+  statKeys: StatKey[]; // stats entraînées par cette quête (calculé depuis les objectifs)
 };
 
 interface Props {
   quests: QuestWithStats[];
-  activeIds: Set<string>;
-  /** Per-quest disabled flag (used by secondary page when the limit is reached). */
-  disabledIds?: Set<string>;
+  activeIds: Set<string>;   // Set des IDs de quêtes que le joueur a déjà actives
+  disabledIds?: Set<string>; // quêtes non cliquables (ex: limite secondaires atteinte)
 }
 
 export function QuestStatFilter({ quests, activeIds, disabledIds }: Props) {
+  // null = "Tous" (pas de filtre) ; une StatKey = filtrer sur cette stat
   const [selected, setSelected] = useState<StatKey | null>(null);
 
-  // Only show stats that appear in at least one quest
+  /**
+   * Calculer quelles stats sont présentes dans au moins une quête.
+   * On utilise un Set pour éviter les doublons et une itération O(n).
+   * Seules ces stats apparaîtront comme chips de filtre.
+   */
   const availableStatKeys = new Set<StatKey>();
   for (const quest of quests) {
     for (const key of quest.statKeys) {
       availableStatKeys.add(key);
     }
   }
+  // Filtrer STAT_DEFS pour garder l'ordre d'affichage cohérent
   const visibleStats = STAT_DEFS.filter((s) => availableStatKeys.has(s.key));
 
   const filtered =

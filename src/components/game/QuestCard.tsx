@@ -1,8 +1,25 @@
+/**
+ * QuestCard.tsx — Carte de présentation d'une quête dans les listes.
+ *
+ * Chaque carte affiche : titre, description (tronquée à 3 lignes), difficulté,
+ * durée et récompense XP. La bordure est colorée selon la difficulté (comme les
+ * raretés dans Fortnite : vert=facile, bleu=moyen, violet=difficile...).
+ *
+ * Clique sur la carte → navigue vers la page de détail de la quête.
+ *
+ * Props :
+ *   quest    : les données de la quête (sous-ensemble de la table `quests`)
+ *   isActive : si true, affiche le badge "En cours" (le joueur a cette quête active)
+ *   disabled : si true, la carte est grisée et non cliquable (ex: limite de quêtes atteinte)
+ *
+ * C'est un Server Component (pas de 'use client') : rendu côté serveur, pas d'interactivité.
+ */
 import Link from 'next/link';
 import { difficultyColors } from '@/lib/utils';
 import { Clock, Zap, Check } from 'lucide-react';
 import type { Database } from '@/types/database';
 
+// On n'extrait que les champs nécessaires de la table `quests` (pattern Pick<>)
 type Quest = Pick<
   Database['public']['Tables']['quests']['Row'],
   'id' | 'title' | 'description' | 'difficulty' | 'duration_days' | 'xp_reward' | 'icon'
@@ -10,15 +27,18 @@ type Quest = Pick<
 
 interface Props {
   quest: Quest;
-  isActive?: boolean;
-  disabled?: boolean;
+  isActive?: boolean;   // le joueur a cette quête en cours
+  disabled?: boolean;   // carte non cliquable (limite atteinte, etc.)
 }
 
 /**
- * Quest card with Fortnite-style rarity border (color = difficulty).
- * Click → quest detail page.
+ * Rendu de la carte.
+ * `href={disabled ? '#' : ...}` : si disabled, le lien ne va nulle part
+ *   + `pointer-events-none` empêche le clic au niveau CSS.
+ * `aria-disabled` : signale l'état désactivé aux lecteurs d'écran (accessibilité).
  */
 export function QuestCard({ quest, isActive, disabled }: Props) {
+  // Récupère les infos de couleur/nom pour la difficulté de cette quête
   const diff = difficultyColors[quest.difficulty];
 
   return (

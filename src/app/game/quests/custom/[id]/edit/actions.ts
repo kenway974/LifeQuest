@@ -1,3 +1,23 @@
+/**
+ * custom/[id]/edit/actions.ts — Toutes les actions CRUD de l'éditeur de quête perso.
+ *
+ * Cet éditeur permet de construire la structure complète d'une quête :
+ *   Quête → Objectifs → Tâches
+ *
+ * Chaque niveau a ses propres actions create/update/delete.
+ * Toutes les actions vérifient via `assertOwnsQuest()` que l'utilisateur est bien
+ * le créateur de la quête (ownership check). Sans ça, n'importe qui pourrait
+ * modifier la quête de quelqu'un d'autre en envoyant des requêtes directes.
+ *
+ * Les schemas Zod définissent les contraintes de saisie :
+ *   - Titres : 3-120 caractères
+ *   - stat_impacts : { statKey: valeur 0-20 } (les impacts sur les stats)
+ *   - frequency_days : 1-365 (fréquence des tâches)
+ *   - is_optional : boolean (tâche bonus vs. obligatoire)
+ *
+ * `revalidatePath` : invalide le cache de la page d'édition après chaque mutation.
+ * Sans ça, l'utilisateur verrait l'ancienne version mise en cache par Next.js.
+ */
 'use server';
 
 import { revalidatePath } from 'next/cache';

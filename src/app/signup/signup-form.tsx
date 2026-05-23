@@ -1,3 +1,22 @@
+/**
+ * signup-form.tsx — Formulaire d'inscription (Client Component).
+ *
+ * Même architecture que login-form.tsx mais pour la création de compte.
+ *
+ * Points importants sur l'inscription Supabase :
+ *   - Le pseudo est passé dans `options.data` (métadonnées utilisateur)
+ *     → un trigger PostgreSQL côté Supabase crée automatiquement la ligne
+ *       dans la table `profiles` avec ce pseudo
+ *   - `emailRedirectTo` : si la confirmation email est activée dans Supabase,
+ *     l'utilisateur reçoit un mail et clique sur le lien → redirigé vers /auth/callback
+ *   - Si la confirmation email est désactivée (mode dev), la session est créée
+ *     immédiatement et setTimeout redirige vers /game après 1.5s
+ *
+ * Validation du pseudo :
+ *   - Regex `[a-zA-Z0-9_-]+` : seulement lettres, chiffres, tiret et underscore
+ *   - Évite les injections SQL, XSS ou problèmes d'URL (les espaces et caractères
+ *     spéciaux cassent les URLs des profils publics /game/player/:pseudo)
+ */
 'use client';
 
 import { useState } from 'react';
@@ -5,6 +24,10 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
 
+/**
+ * Validation du formulaire d'inscription.
+ * `.regex()` vérifie que le pseudo ne contient que des caractères sûrs pour une URL.
+ */
 const SignupSchema = z.object({
   pseudo: z
     .string()
@@ -19,6 +42,7 @@ export function SignupForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // success : bascule vers un message de confirmation au lieu du formulaire
   const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -44,12 +68,16 @@ export function SignupForm() {
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
+        // `data` = métadonnées utilisateur stockées dans auth.users
+        // Le trigger Supabase les utilise pour créer la ligne dans `profiles`
         data: { pseudo: parsed.data.pseudo },
+        // URL vers laquelle Supabase redirige après confirmation email
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
     if (authError) {
+      // Détecte si l'email est déjà pris (message Supabase contient "already")
       setError(
         authError.message.includes('already')
           ? 'Cet email est déjà utilisé.'
@@ -61,8 +89,8 @@ export function SignupForm() {
 
     setSuccess(true);
     setLoading(false);
-    // If Supabase email confirmation is enabled, the user must click the email link.
-    // If disabled (e.g. for dev), redirect directly to /game.
+    // Si confirmation email désactivée (dev) : redirect auto après 1.5s
+    // Si confirmation email activée : l'utilisateur doit cliquer sur le lien email
     setTimeout(() => router.push('/game'), 1500);
   }
 

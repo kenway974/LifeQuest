@@ -1,3 +1,19 @@
+/**
+ * actions.ts (game/components) — Server Actions pour la progression du jeu.
+ *
+ * Ce fichier est marqué 'use server' : toutes ses fonctions exportées sont des
+ * "Server Actions" — des fonctions exécutées côté serveur, appelables depuis
+ * le navigateur comme si elles étaient locales (Next.js gère le réseau en coulisse).
+ *
+ * Contient :
+ *   - `completeTaskAction` : valide une tâche pour aujourd'hui (logique principale du jeu)
+ *   - Helpers privés pour les vérifications de progression
+ *   - `checkTrophyUnlocks` : vérifie et débloque les trophées
+ *
+ * Sécurité : chaque action vérifie que l'utilisateur est connecté ET propriétaire
+ * de la ressource (user_id = user.id dans les requêtes Supabase).
+ * Le RLS (Row Level Security) de Supabase est une deuxième couche de protection.
+ */
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -11,14 +27,23 @@ import {
 } from '@/lib/quests';
 
 /**
- * Complete a task for today.
- * Rules (fixed schedule + 1-day grace):
- *  - The task must have at least one "active" occurrence today (scheduled or in grace).
- *  - The user can only validate once per task per day (DB unique constraint).
- *  - Validation is greedily assigned to the earliest active occurrence.
- *  - XP for the task is awarded.
- *  - If the validation completes the parent objective → bonus XP.
- *  - If the validation completes the quest → bonus XP, status flips to 'completed'.
+ * Action principale : valide une tâche pour aujourd'hui.
+ *
+ * Séquence d'opérations (dans l'ordre) :
+ *   1. Authentification + récupération de la tâche et sa quête parente
+ *   2. Vérification que la user_quest appartient bien à l'utilisateur
+ *   3. Vérification qu'il y a une occurrence "active" aujourd'hui (non encore validée)
+ *   4. Snapshot de l'état AVANT la validation (pour détecter les "objectif vient d'être accompli")
+ *   5. Insertion en DB de la validation (user_tasks)
+ *   6. Calcul des XP gagnés :
+ *      - XP de la tâche (×1.5 si bonus)
+ *      - +XP de l'objectif si l'objectif vient juste d'être complété
+ *      - +bonus "journée parfaite" si tous les objectifs du jour sont faits
+ *      - +XP de la quête si la quête vient d'être terminée
+ *   7. Mise à jour du niveau et du profil
+ *   8. Mise à jour de la progression de la quête (progress_pct)
+ *   9. Vérification des trophées à débloquer
+ *  10. revalidatePath() : invalide le cache Next.js pour forcer le rechargement des pages
  */
 export async function completeTaskAction(userQuestId: string, taskId: string) {
   const supabase = await createClient();
@@ -318,6 +343,22 @@ async function computeQuestProgress(
   return aggregateQuest(objectiveProgresses);
 }
 
+/**
+ * Vérifie et débloque les trophées mérités après une action.
+ *
+ * Pattern "check-then-insert" :
+ *   1. Charger tous les trophées disponibles
+ *   2. Charger les trophées déjà obtenus (pour ne pas les re-débloquer)
+ *   3. Pour chaque trophée non-obtenu, vérifier la condition
+ *   4. Insérer tous les trophées débloqués en une seule requête (batch insert)
+ *
+ * Les conditions sont vérifiées via des comptages en DB (COUNT).
+ * On utilise `{ count: 'exact', head: true }` : retourne seulement le count,
+ * pas les données (évite de charger inutilement des centaines de lignes).
+ *
+ * `findCode(code)` : helper local qui cherche un trophée par son code
+ * et vérifie qu'il n'est pas déjà obtenu, retourne son ID ou undefined.
+ */
 async function checkTrophyUnlocks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -330,6 +371,7 @@ async function checkTrophyUnlocks(
     .from('user_trophies')
     .select('trophy_id')
     .eq('user_id', userId);
+  // Set pour les lookups O(1) : beaucoup plus rapide qu'un .find() sur un tableau
   const ownedIds = new Set(owned?.map((t) => t.trophy_id) ?? []);
 
   const toUnlock: string[] = [];

@@ -1,3 +1,19 @@
+/**
+ * login-form.tsx — Formulaire de connexion interactif (Client Component).
+ *
+ * C'est un Client Component ('use client') car il gère :
+ *   - L'état local (loading, error)
+ *   - Les événements utilisateur (submit du formulaire, clic Google)
+ *   - La navigation après connexion (useRouter)
+ *
+ * Flux de connexion email/mot de passe :
+ *   1. L'utilisateur remplit le formulaire et clique "Se connecter"
+ *   2. On valide les données côté client avec Zod (évite un aller-retour réseau inutile)
+ *   3. On appelle `supabase.auth.signInWithPassword` (authentification via Supabase)
+ *   4. Supabase écrit un cookie de session dans le navigateur
+ *   5. `router.push('/game')` navigue vers le jeu
+ *   6. `router.refresh()` force Next.js à re-fetcher les Server Components (qui liront le nouveau cookie)
+ */
 'use client';
 
 import { useState } from 'react';
@@ -5,48 +21,75 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
 
+/**
+ * Schéma de validation Zod pour le formulaire de login.
+ * Exécuté CÔTÉ CLIENT avant d'envoyer la requête à Supabase.
+ * Permet d'afficher immédiatement un message d'erreur sans attendre le réseau.
+ */
 const LoginSchema = z.object({
   email: z.string().email('Email invalide'),
   password: z.string().min(8, 'Mot de passe trop court (8 caractères minimum)'),
 });
 
 export function LoginForm() {
+  // useRouter : permet la navigation programmatique (router.push('/game'))
   const router = useRouter();
+  // useSearchParams : lit les paramètres d'URL (?next=/game/quests/...)
   const params = useSearchParams();
+  // loading : désactive le bouton pour éviter un double-clic
   const [loading, setLoading] = useState(false);
+  // error : message d'erreur affiché sous le formulaire (null = pas d'erreur)
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Soumission du formulaire email/mot de passe.
+   * `e.preventDefault()` : empêche le rechargement de page par défaut du navigateur.
+   * `FormData` : façon native de lire les valeurs d'un formulaire HTML.
+   */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
+    setError(null);    // réinitialise l'erreur précédente
     setLoading(true);
 
+    // Lire les valeurs du formulaire
     const formData = new FormData(e.currentTarget);
+    // Valider avec Zod (côté client, rapide, sans réseau)
     const parsed = LoginSchema.safeParse({
       email: formData.get('email'),
       password: formData.get('password'),
     });
 
+    // Si validation échoue, afficher le premier message d'erreur
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Données invalides');
       setLoading(false);
       return;
     }
 
+    // Appel à l'API d'authentification Supabase
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (authError) {
+      // On affiche un message générique pour ne pas aider un attaquant
+      // (on ne précise pas si c'est l'email ou le mot de passe qui est faux)
       setError('Email ou mot de passe incorrect');
       setLoading(false);
       return;
     }
 
+    // Connexion réussie → naviguer vers la destination (ou /game par défaut)
     const next = params.get('next') ?? '/game';
     router.push(next);
+    // refresh() force les Server Components à relire les cookies (session mise à jour)
     router.refresh();
   }
 
+  /**
+   * Connexion via Google (OAuth).
+   * `signInWithOAuth` redirige le navigateur vers Google, qui redirige ensuite
+   * vers /auth/callback avec un code d'autorisation (voir auth/callback/route.ts).
+   */
   async function handleGoogle() {
     setError(null);
     setLoading(true);

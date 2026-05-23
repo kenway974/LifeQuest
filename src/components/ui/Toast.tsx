@@ -1,33 +1,73 @@
+/**
+ * Toast.tsx — Système de notifications temporaires (toasts).
+ *
+ * Un "toast" est un message qui apparaît brièvement en haut de l'écran
+ * puis disparaît automatiquement (comme une notification mobile).
+ *
+ * Architecture en deux parties :
+ *
+ * 1. `useToasts()` — le "hook headless" (logique sans UI)
+ *    Gère la liste des toasts actifs + les fonctions pour en ajouter/supprimer.
+ *    "Headless" = logique pure, sans JSX. Le composant peut utiliser ce hook
+ *    et l'UI qu'il veut.
+ *
+ * 2. `ToastHost` — le conteneur de toasts (UI)
+ *    Positionnement fixe en haut de l'écran, affiche la liste de toasts.
+ *
+ * 3. `Toast` — le composant individuel (UI)
+ *    Un seul toast avec son animation d'apparition et son bouton de fermeture.
+ *
+ * Astuce de l'ID unique : `Date.now() + Math.random()` génère un nombre quasi-unique
+ * sans avoir besoin d'un compteur global ou d'une bibliothèque UUID.
+ *
+ * Pattern "optimistic dismiss" :
+ *   Le setTimeout dans push() programme la disparition automatique.
+ *   Si l'utilisateur ferme manuellement avant, dismiss() retire le toast du tableau
+ *   mais le setTimeout s'exécutera quand même → l'appel `dismiss(id)` sur un toast
+ *   déjà retiré est inoffensif (filter() ne trouve rien à retirer).
+ */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 
+// Les 3 types de toasts (chacun a une couleur et une icône différentes)
 export type ToastTone = 'error' | 'success' | 'info';
 
 export interface ToastMessage {
-  id: number;
+  id: number;      // identifiant unique pour la key React et le dismiss
   tone: ToastTone;
-  title?: string;
-  body: string;
+  title?: string;  // titre optionnel en gras au-dessus du body
+  body: string;    // message principal
 }
 
 /**
- * Headless toast hook: returns a list of active toasts + helpers to push/dismiss.
- * Auto-dismiss after `duration` ms (default 6s).
+ * Hook personnalisé qui gère la liste des toasts actifs.
+ *
+ * `Omit<ToastMessage, 'id'>` : TypeScript retire le champ 'id' du type
+ *   (l'id est généré automatiquement, l'appelant n'a pas à le fournir).
+ *
+ * `duration = 6000` : paramètre optionnel avec valeur par défaut (6 secondes).
+ *
+ * Retourne des helpers nommés (pushError, pushSuccess, pushInfo) pour éviter
+ * d'avoir à passer `tone` à chaque appel.
  */
 export function useToasts(duration = 6000) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   function push(input: Omit<ToastMessage, 'id'>) {
+    // ID unique : timestamp + nombre aléatoire (évite les collisions si deux toasts
+    // sont créés dans la même milliseconde)
     const id = Date.now() + Math.random();
     setToasts((cur) => [...cur, { ...input, id }]);
+    // Auto-dismiss après `duration` ms
     if (duration > 0) {
       setTimeout(() => dismiss(id), duration);
     }
   }
 
   function dismiss(id: number) {
+    // filter() crée un nouveau tableau sans le toast avec cet id
     setToasts((cur) => cur.filter((t) => t.id !== id));
   }
 

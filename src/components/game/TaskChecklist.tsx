@@ -1,3 +1,22 @@
+/**
+ * TaskChecklist.tsx — Liste des objectifs et tâches d'une quête en cours.
+ *
+ * C'est le composant le plus complexe de l'app. Il gère :
+ *   - L'affichage de chaque objectif avec ses tâches
+ *   - La validation d'une tâche (clic sur le checkbox) avec mise à jour optimiste
+ *   - Les badges de progression (Maîtrisé, Accompli, Jour parfait...)
+ *   - La barre de progression par objectif
+ *
+ * "Mise à jour optimiste" (optimistic UI) :
+ *   Quand l'utilisateur coche une tâche, on met à jour l'interface IMMÉDIATEMENT
+ *   sans attendre la réponse du serveur (l'état local `completedToday` est mis à jour).
+ *   En parallèle, on envoie la Server Action. Si le serveur retourne une erreur,
+ *   on "rollback" (annule) la mise à jour locale.
+ *   → L'interface semble instantanée, sans spinner d'attente.
+ *
+ * `useTransition` : hook React pour exécuter une action serveur en arrière-plan
+ *   sans bloquer l'interface. `pending` est true pendant l'exécution.
+ */
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -36,6 +55,17 @@ function formatFr(ymd: string): string {
 }
 
 export function TaskChecklist({ userQuestId, objectives }: Props) {
+  /**
+   * `completedToday` : Set des IDs de tâches validées aujourd'hui.
+   * Initialisé depuis les données serveur (tâches déjà faites aujourd'hui).
+   * Mis à jour localement (optimiste) à chaque clic, avant la réponse serveur.
+   *
+   * On utilise un Set (et non un tableau) pour les recherches O(1) : `.has(taskId)`
+   * est instantané même avec des centaines de tâches.
+   *
+   * La fonction d'initialisation `() => new Set(...)` n'est exécutée qu'une seule fois
+   * (lazy initializer de useState).
+   */
   const [completedToday, setCompletedToday] = useState<Set<string>>(
     () =>
       new Set(
@@ -44,23 +74,36 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
         ),
       ),
   );
+  // `pending` : true pendant qu'une Server Action est en cours (évite double-clic)
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
+  /**
+   * Gestion du clic sur une tâche.
+   *
+   * 1. Si déjà faite → rien (les tâches sont one-way, pas de dé-validation)
+   * 2. Mise à jour optimiste : on ajoute taskId au Set local immédiatement
+   * 3. Server Action en arrière-plan via startTransition :
+   *    - Si erreur → rollback (on retire taskId du Set)
+   *    - Si succès → router.refresh() pour re-fetcher les données serveur (XP, progress...)
+   */
   async function handleToggle(taskId: string) {
-    if (completedToday.has(taskId)) return;
+    if (completedToday.has(taskId)) return; // déjà faite, ignorer
 
+    // Mise à jour optimiste — affichage immédiat
     setCompletedToday((prev) => new Set(prev).add(taskId));
 
     startTransition(async () => {
       const result = await completeTaskAction(userQuestId, taskId);
       if (result?.error) {
+        // Rollback : retirer la tâche du Set si le serveur a refusé
         setCompletedToday((prev) => {
           const next = new Set(prev);
           next.delete(taskId);
           return next;
         });
       } else {
+        // Succès : rafraîchir les données serveur (XP, barre de progression, trophées...)
         router.refresh();
       }
     });

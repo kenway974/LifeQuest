@@ -1,34 +1,62 @@
+/**
+ * RadarChart.tsx — Graphique radar SVG (aussi appelé "spider chart") pour les 9 stats.
+ *
+ * Un graphique radar est un polygone où chaque sommet correspond à une statistique.
+ * Plus la valeur est haute, plus le sommet est loin du centre.
+ * La forme du polygone visualise "l'équilibre" du personnage.
+ *
+ * Ce composant dessine en SVG pur (pas de bibliothèque externe) :
+ *   - Des anneaux de référence à 25/50/75/100 (polygones en arrière-plan)
+ *   - Des lignes d'axe du centre vers chaque sommet
+ *   - Le polygone "baseline" en pointillés (valeurs initiales du questionnaire)
+ *   - Le polygone "actuel" rempli d'un dégradé (valeurs calculées depuis les quêtes)
+ *   - Un point coloré à chaque sommet du polygone actuel
+ *   - Les labels de stats en dehors du cercle
+ *
+ * Mathématiques du radar :
+ *   - Les n axes sont répartis uniformément à 360°/n = 40° l'un de l'autre
+ *   - Formule polaire → cartésienne : x = cx + r * cos(θ), y = cy + r * sin(θ)
+ *   - Le -Math.PI/2 dans l'angle fait commencer en haut (midi sur une horloge)
+ *   - La valeur de la stat divise r par 100 (stat 70 = 70% du rayon max)
+ */
 'use client';
 
 import { STAT_DEFS, type StatValues } from '@/lib/character-stats';
 
 interface Props {
-  current: StatValues;
-  baseline?: StatValues;
-  size?: number;
+  current: StatValues;      // stats actuelles (polygone rempli)
+  baseline?: StatValues;    // stats initiales (polygone pointillé, optionnel)
+  size?: number;            // taille en pixels du viewBox (défaut: 320)
 }
 
-/**
- * SVG radar/spider chart. 9 axes (one per stat), filled polygon at current values
- * + dashed outline at baseline (if provided) to show evolution.
- */
 export function RadarChart({ current, baseline, size = 320 }: Props) {
-  // Extra room around the polygon for axis labels (they sit outside the radius).
+  // Marge autour du polygone pour les labels (qui dépassent du cercle)
   const padding = Math.round(size * 0.18);
-  const center = size / 2;
-  const radius = size * 0.36;
-  const axes = STAT_DEFS;
-  const n = axes.length;
+  const center = size / 2;       // centre du SVG
+  const radius = size * 0.36;    // rayon du cercle à 100%
+  const axes = STAT_DEFS;        // les 9 stats = les 9 axes du radar
+  const n = axes.length;         // = 9
 
-  // Rings at 25/50/75/100
+  // Les anneaux de référence sont dessinés à 25%, 50%, 75% et 100% du rayon
   const rings = [0.25, 0.5, 0.75, 1];
 
+  /**
+   * Convertit un index de stat + une valeur (0-100) en coordonnées SVG (x, y).
+   * C'est la conversion polaire → cartésienne :
+   *   - angle : position angulaire de l'axe i (répartis uniformément)
+   *   - r : distance depuis le centre (proportionnelle à la valeur)
+   */
   function point(i: number, value: number): [number, number] {
-    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2; // -90° pour commencer en haut
     const r = radius * (value / 100);
     return [center + r * Math.cos(angle), center + r * Math.sin(angle)];
   }
 
+  /**
+   * Génère la chaîne de points SVG pour un anneau de référence.
+   * `scale * 100` : ex. scale=0.5 → valeur 50 → 50% du rayon.
+   * Le format SVG des polygones est "x1,y1 x2,y2 x3,y3 ..."
+   */
   function ringPoints(scale: number): string {
     return axes
       .map((_, i) => {
@@ -38,6 +66,10 @@ export function RadarChart({ current, baseline, size = 320 }: Props) {
       .join(' ');
   }
 
+  /**
+   * Génère la chaîne de points du polygone de stats (le "vrai" profil du joueur).
+   * Chaque sommet est positionné selon la valeur réelle de la stat correspondante.
+   */
   function statsPolygon(values: StatValues): string {
     return axes
       .map((s, i) => {

@@ -1,19 +1,26 @@
+/**
+ * quests/[id]/actions.ts — Actions serveur pour démarrer ou abandonner une quête.
+ *
+ * `startQuestAction` : démarre une quête pour l'utilisateur connecté.
+ *   Règles métier appliquées côté serveur (ne jamais faire confiance au client) :
+ *   - Max 2 quêtes principales actives simultanément
+ *   - Quêtes secondaires : 5 max sans quête principale, 3 avec 1 principale, 0 avec 2 principales
+ *   - Quêtes personnalisées : require has_custom_quests = true (payant)
+ *
+ * Pourquoi toujours `redirect()` au lieu de retourner une valeur ?
+ *   Cette action est bindée à un formulaire HTML (`action={startQuestAction.bind(null, id)}`).
+ *   En cas de succès, on redirige vers la page de suivi de la quête.
+ *   En cas d'erreur, on redirige vers la page de détail avec ?error=message.
+ *   → L'URL contient le message d'erreur, la page peut le lire et l'afficher.
+ *
+ * `abandonQuestAction` : change le statut de 'active' à 'abandoned'.
+ *   Irréversible (il n'y a pas de "reprendre une quête abandonnée").
+ */
 'use server';
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-
-/**
- * Start a quest for the current user.
- * Enforces the business rules:
- *  - max 2 active main quests at a time
- *  - max 5 secondary if 0 main, 3 secondary if 1 main, 0 secondary if 2 main
- *  - custom quests require has_custom_quests = true
- *
- * Always redirects (no return value). On failure, redirects back to the quest
- * detail page with ?error=<msg> that the page can surface to the user.
- */
 export async function startQuestAction(questId: string, formData: FormData): Promise<void> {
   const fail = (msg: string) =>
     redirect(`/game/quests/${questId}?error=${encodeURIComponent(msg)}`);

@@ -1,3 +1,19 @@
+/**
+ * PlayerSearch.tsx — Barre de recherche de joueurs par pseudo.
+ *
+ * Permet de chercher d'autres joueurs pour voir leur profil public.
+ *
+ * `.ilike('pseudo', '%query%')` : recherche case-insensitive dans Supabase
+ *   - `ilike` = like insensible à la casse (contrairement à `like`)
+ *   - Les `%` sont des wildcards SQL (correspondent à n'importe quelle chaîne)
+ *   - Résultat : retourne tous les pseudos qui CONTIENNENT le mot cherché
+ *
+ * `.limit(20)` : on plafonne à 20 résultats pour ne pas surcharger l'UI.
+ *
+ * C'est un Client Component car il gère un formulaire interactif avec état local.
+ * La requête Supabase se fait directement depuis le navigateur (pas de Server Action
+ * nécessaire car c'est une lecture publique, pas une écriture).
+ */
 'use client';
 
 import { useState } from 'react';
@@ -5,6 +21,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Search, User } from 'lucide-react';
 
+// Type des résultats de recherche (sous-ensemble du profil)
 interface Result {
   id: string;
   pseudo: string;
@@ -14,10 +31,15 @@ interface Result {
 }
 
 export function PlayerSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Result[]>([]);
+  const [query, setQuery] = useState('');           // texte tapé dans la barre de recherche
+  const [results, setResults] = useState<Result[]>([]); // résultats de la dernière recherche
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Soumettre la recherche.
+   * Guard `query.trim().length < 2` : au moins 2 caractères pour éviter
+   * des requêtes trop larges (% retournerait TOUS les joueurs).
+   */
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (query.trim().length < 2) return;
@@ -26,9 +48,9 @@ export function PlayerSearch() {
     const { data } = await supabase
       .from('profiles')
       .select('id, pseudo, level, xp, avatar_url')
-      .ilike('pseudo', `%${query.trim()}%`)
+      .ilike('pseudo', `%${query.trim()}%`) // recherche partielle insensible à la casse
       .limit(20);
-    setResults(data ?? []);
+    setResults(data ?? []); // `data ?? []` : si data est null, utiliser un tableau vide
     setLoading(false);
   }
 

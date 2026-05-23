@@ -1,12 +1,26 @@
+/**
+ * api/stripe/checkout/route.ts — Crée une session de paiement Stripe Checkout.
+ *
+ * Route Handler Next.js (POST /api/stripe/checkout).
+ * Appelé par CheckoutButton.tsx quand l'utilisateur veut débloquer les quêtes perso.
+ *
+ * Pourquoi côté serveur ?
+ *   - La STRIPE_SECRET_KEY ne doit jamais être exposée au navigateur
+ *   - Stripe impose que les sessions soient créées côté serveur
+ *
+ * La `metadata` dans la session Stripe est CRITIQUE :
+ *   Elle stocke le `user_id` pour que le webhook (stripe/webhook/route.ts) sache
+ *   quel compte débloquer après le paiement. Sans ça, on ne pourrait pas faire
+ *   le lien entre le paiement Stripe et l'utilisateur LifeQuest.
+ *
+ * `success_url` et `cancel_url` : pages vers lesquelles Stripe redirige après
+ *   le paiement réussi ou annulé.
+ */
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { env } from '@/lib/env';
 
-/**
- * Create a Stripe Checkout session for the €2 custom-quests lifetime unlock.
- * Requires the user to be authenticated.
- */
 export async function POST() {
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_CUSTOM_QUESTS_PRICE_ID) {
     return NextResponse.json({ error: 'Paiement non configuré' }, { status: 503 });

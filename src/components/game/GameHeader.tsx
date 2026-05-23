@@ -1,3 +1,20 @@
+/**
+ * GameHeader.tsx — Barre de navigation en haut de l'écran de jeu.
+ *
+ * Affiche :
+ *   - Logo "LIFEQUEST" (lien vers le menu principal)
+ *   - Barre de progression XP (niveau actuel → niveau suivant)
+ *   - Pseudo du joueur (lien vers son profil)
+ *   - Bouton Paramètres
+ *   - Bouton Déconnexion
+ *
+ * C'est un Client Component ('use client') car il gère :
+ *   - La déconnexion (appel à l'API Supabase)
+ *   - La navigation après déconnexion (useRouter)
+ *
+ * Il reçoit les données du profil en props depuis le Server Component parent
+ * (game/layout.tsx qui fait la requête Supabase côté serveur).
+ */
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +24,11 @@ import { xpToNextLevel } from '@/lib/utils';
 import { LogOut, Settings } from 'lucide-react';
 import type { Database } from '@/types/database';
 
+/**
+ * `Pick` est un utilitaire TypeScript qui extrait seulement certaines propriétés d'un type.
+ * Ici on prend 6 champs de la ligne complète `profiles` — juste ce dont le header a besoin.
+ * Avantage : si la table `profiles` a 20 colonnes, on ne charge que les 6 utiles.
+ */
 type Profile = Pick<
   Database['public']['Tables']['profiles']['Row'],
   'id' | 'pseudo' | 'avatar_url' | 'level' | 'xp' | 'has_custom_quests'
@@ -14,8 +36,15 @@ type Profile = Pick<
 
 export function GameHeader({ profile }: { profile: Profile }) {
   const router = useRouter();
+  // Calcule le pourcentage de progression vers le prochain niveau
   const xpProgress = xpToNextLevel(profile.xp);
 
+  /**
+   * Déconnexion : appelle Supabase pour effacer la session (cookie supprimé),
+   * puis redirige vers la page d'accueil.
+   * `router.refresh()` force Next.js à re-rendre les Server Components
+   * (qui vérifieront que la session n'existe plus et redirigeront si besoin).
+   */
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();

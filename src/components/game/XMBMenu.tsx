@@ -1,3 +1,25 @@
+/**
+ * XMBMenu.tsx — Menu principal du jeu, inspiré du XrossMediaBar (XMB) de la PS3.
+ *
+ * Le XMB original de Sony (PlayStation 3/PSP) est un menu en croix :
+ *   - Axe horizontal : catégories (Aventure, Progression, Profil, Système)
+ *   - Axe vertical : éléments de la catégorie active
+ *
+ * Ce composant recrée ce pattern avec des animations CSS (transform + transition).
+ *
+ * Navigation clavier :
+ *   ←/→ : changer de catégorie
+ *   ↑/↓ : naviguer dans les éléments
+ *   Entrée/Espace : ouvrir l'élément sélectionné
+ *
+ * Architecture :
+ *   - Desktop (md+) : le vrai XMB avec animations cinématiques
+ *   - Mobile : fallback en grille classique avec navigation par onglets en bas
+ *     (pattern "bottom tab bar" style Clash Royale)
+ *
+ * `useMemo` : recalcule les catégories seulement si `activeQuest` change
+ *   (évite de re-créer le tableau à chaque re-rendu).
+ */
 'use client';
 
 import Link from 'next/link';
@@ -44,7 +66,9 @@ interface XMBCategory {
   items: XMBItem[];
 }
 
+// Distance en pixels entre chaque icône de catégorie sur l'axe horizontal
 const CAT_SLOT = 160; // px between categories on the horizontal axis
+// Distance en pixels entre chaque élément de la liste sur l'axe vertical
 const ITEM_SLOT = 84; // px between items on the vertical axis
 
 function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] {
@@ -187,15 +211,28 @@ export function XMBMenu({
   mobileProfile,
   mobileSystem,
 }: XMBMenuProps) {
+  // Recalcule les catégories seulement si la quête active change
   const categories = useMemo(() => buildCategories(activeQuest), [activeQuest]);
   const router = useRouter();
+  // catIdx : index de la catégorie actuellement focalisée (axe horizontal)
   const [catIdx, setCatIdx] = useState(0);
+  // itemIdx : index de l'élément focalisé dans la catégorie active (axe vertical)
   const [itemIdx, setItemIdx] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // Raccourcis : catégorie et élément actifs
   const currentCat = categories[catIdx];
   const currentItem = currentCat.items[itemIdx];
 
+  /**
+   * Gestion de la navigation au clavier (style console de jeu).
+   * L'event listener est ajouté sur `window` pour capturer les touches globalement.
+   * La vérification `instanceof HTMLInputElement` évite de capter les touches
+   * quand l'utilisateur tape dans un champ de recherche ou un textarea.
+   *
+   * Le `return () => removeEventListener(...)` dans useEffect est le "cleanup" :
+   * il retire le listener quand le composant est démonté (évite les fuites mémoire).
+   */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -203,15 +240,15 @@ export function XMBMenu({
         case 'ArrowLeft':
           e.preventDefault();
           setCatIdx((i) => {
-            const next = Math.max(0, i - 1);
-            if (next !== i) setItemIdx(0);
+            const next = Math.max(0, i - 1); // Math.max empêche de passer en-dessous de 0
+            if (next !== i) setItemIdx(0);   // reset l'item quand on change de catégorie
             return next;
           });
           break;
         case 'ArrowRight':
           e.preventDefault();
           setCatIdx((i) => {
-            const next = Math.min(categories.length - 1, i + 1);
+            const next = Math.min(categories.length - 1, i + 1); // Math.min = pas dépasser la fin
             if (next !== i) setItemIdx(0);
             return next;
           });
@@ -227,15 +264,17 @@ export function XMBMenu({
         case 'Enter':
         case ' ':
           e.preventDefault();
-          router.push(currentItem.href);
+          router.push(currentItem.href); // navigation vers la page de l'élément sélectionné
           break;
       }
     }
     window.addEventListener('keydown', onKey);
+    // Cleanup : retirer le listener quand le composant est démonté
     return () => window.removeEventListener('keydown', onKey);
   }, [categories.length, currentCat.items.length, currentItem.href, router]);
 
-  // Prevent OOB after activeQuest changes the item count
+  // Si la quête active change (plus/moins d'items), on remet l'index à 0 pour éviter
+  // un index hors-limites (OOB = Out Of Bounds)
   useEffect(() => {
     if (itemIdx >= currentCat.items.length) setItemIdx(0);
   }, [currentCat.items.length, itemIdx]);
