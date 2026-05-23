@@ -6,7 +6,6 @@ const nextConfig = {
   // during "Applying modifyConfig". If this is undefined the build crashes with
   // ERR_INVALID_ARG_TYPE. Pin it explicitly to the project root.
   outputFileTracingRoot: process.cwd(),
-  experimental: {},
   images: {
     remotePatterns: [
       // Supabase storage (avatars, custom backgrounds)
