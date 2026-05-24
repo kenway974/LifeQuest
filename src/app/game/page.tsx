@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { XMBMenu, type ActiveQuestSummary } from '@/components/game/XMBMenu';
+import { StreakHero } from '@/components/game/StreakHero';
 import { tasksDueToday, type TaskFrequency } from '@/lib/quests';
+import { computeStreak, refilledFreezes } from '@/lib/streak';
 
 export const metadata = {
   title: 'Menu principal',
@@ -61,17 +63,49 @@ export default async function GameMenuPage() {
         .single(),
     ]);
 
-  const [{ count: completedQuestsCount }, { count: trophyCount }] = await Promise.all([
-    supabase
-      .from('user_quests')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user!.id)
-      .eq('status', 'completed'),
-    supabase
-      .from('user_trophies')
-      .select('trophy_id', { count: 'exact', head: true })
-      .eq('user_id', user!.id),
-  ]);
+  const [{ count: completedQuestsCount }, { count: trophyCount }, { data: recentTasks }] =
+    await Promise.all([
+      supabase
+        .from('user_quests')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user!.id)
+        .eq('status', 'completed'),
+      supabase
+        .from('user_trophies')
+        .select('trophy_id', { count: 'exact', head: true })
+        .eq('user_id', user!.id),
+      supabase
+        .from('user_tasks')
+        .select('completed_date')
+        .eq('user_id', user!.id)
+        .order('completed_date', { ascending: false })
+        .limit(90),
+    ]);
+
+  // Streak computation with lazy freeze refill.
+  // Note: streak_freezes_* columns come from migration 0009; we fetch them
+  // via an untyped query because they're not yet in the generated DB types
+  // (regenerate with `npm run db:types` after applying the migration to
+  // restore strict typing).
+  const { data: freezesRow } = (await supabase
+    .from('profiles')
+    .select('streak_freezes_available, streak_freezes_refilled_at')
+    .eq('id', user!.id)
+    .single()) as {
+    data: { streak_freezes_available: number; streak_freezes_refilled_at: string } | null;
+  };
+  const freezesBase = refilledFreezes(
+    freezesRow?.streak_freezes_available ?? 2,
+    freezesRow?.streak_freezes_refilled_at ?? null,
+  );
+  const streakResult = computeStreak(
+    (recentTasks ?? []).map((r) => r.completed_date),
+    freezesBase.available,
+  );
+  const freezesRemaining = Math.max(
+    0,
+    freezesBase.available - streakResult.freezesUsed,
+  );
 
   const activeQuestsList = activeQuestsRaw ?? [];
 
@@ -133,7 +167,15 @@ export default async function GameMenuPage() {
     : null;
 
   return (
-    <XMBMenu
+    <>
+      <div className="mx-auto max-w-3xl px-4 pt-4 md:max-w-7xl md:px-6 md:pt-6">
+        <StreakHero
+          streak={streakResult.streak}
+          freezesAvailable={freezesRemaining}
+          freezesUsedThisStreak={streakResult.freezesUsed}
+        />
+      </div>
+      <XMBMenu
       activeQuest={activeQuest}
       mobileActiveQuests={mobileActiveQuests}
       mobileProfile={
@@ -161,5 +203,6 @@ export default async function GameMenuPage() {
           : null
       }
     />
+    </>
   );
 }
