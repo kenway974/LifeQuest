@@ -5,9 +5,46 @@ import { ArrowLeft, User, Trophy, EyeOff, Lock, Star } from 'lucide-react';
 import { RadarChart } from '@/components/character/RadarChart';
 import { normalizeStats, STAT_DEFS, type StatValues } from '@/lib/character-stats';
 
+/**
+ * Generate Open Graph + Twitter card metadata so shared profile URLs show
+ * a personalized preview on Discord/Twitter/Slack/iMessage etc.
+ * The image is rendered dynamically by /api/og/player/[pseudo]/route.tsx.
+ */
 export async function generateMetadata({ params }: { params: Promise<{ pseudo: string }> }) {
   const { pseudo } = await params;
-  return { title: `Profil de ${pseudo}` };
+  const encoded = encodeURIComponent(pseudo);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lifequest.app';
+  const ogImageUrl = `${siteUrl}/api/og/player/${encoded}`;
+  const pageUrl = `${siteUrl}/game/player/${encoded}`;
+  const title = `${pseudo} — LifeQuest`;
+  const description = `Profil de ${pseudo} sur LifeQuest. Rejoins l'aventure de développement personnel gamifiée.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: pageUrl,
+      siteName: 'LifeQuest',
+      type: 'profile',
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `Profil de ${pseudo}`,
+        },
+      ],
+      locale: 'fr_FR',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
+  };
 }
 
 export default async function PublicPlayerProfilePage({
