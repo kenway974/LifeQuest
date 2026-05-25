@@ -40,6 +40,7 @@ import {
   PlayCircle,
   Wand2,
   Activity,
+  UserCog,
 } from 'lucide-react';
 
 export interface ActiveQuestSummary {
@@ -184,6 +185,13 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
           description: 'Notifications et préférences.',
           href: '/game/settings',
           icon: Settings,
+        },
+        {
+          id: 'account',
+          label: 'Mon compte',
+          description: 'Pseudo, email, mot de passe.',
+          href: '/game/account',
+          icon: UserCog,
         },
       ],
     },
