@@ -35,6 +35,33 @@ export default async function GameMenuPage() {
     redirect('/game/character');
   }
 
+  // Auto-start a starter quest for brand-new users (zero history).
+  // Goal: get them to their first "tick a task" moment in under 60s.
+  // Picks an easy, universally relevant secondary quest by title.
+  // Idempotent: only runs when the user has zero quests ever (any status).
+  const { count: totalUserQuests } = await supabase
+    .from('user_quests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user!.id);
+
+  if ((totalUserQuests ?? 0) === 0) {
+    const STARTER_TITLES = ['Boire 2L d’eau', 'Marche quotidienne 10k pas', '7 jours sans plainte'];
+    for (const title of STARTER_TITLES) {
+      const { data: starter } = await supabase
+        .from('quests')
+        .select('id')
+        .eq('title', title)
+        .is('created_by', null)
+        .maybeSingle();
+      if (starter) {
+        await supabase
+          .from('user_quests')
+          .insert({ user_id: user!.id, quest_id: starter.id, status: 'active' });
+        break;
+      }
+    }
+  }
+
   const [{ data: activeQuestsRaw }, { data: profileFull }, { data: settings }] =
     await Promise.all([
       supabase

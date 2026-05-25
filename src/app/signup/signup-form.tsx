@@ -94,6 +94,26 @@ export function SignupForm() {
     setTimeout(() => router.push('/game'), 1500);
   }
 
+  /**
+   * Inscription via Google (OAuth) — court-circuite le flow email/password.
+   * Le pseudo sera généré automatiquement par le trigger Supabase
+   * (fallback "Player<8 premiers chars du uuid>") puisqu'on n'a pas de form pseudo ici.
+   * L'utilisateur peut le modifier ensuite depuis son profil.
+   */
+  async function handleGoogle() {
+    setError(null);
+    setLoading(true);
+    const supabase = createClient();
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (oauthError) {
+      setError('Inscription Google indisponible. Réessaie plus tard.');
+      setLoading(false);
+    }
+  }
+
   if (success) {
     return (
       <div className="text-center" role="status">
@@ -168,6 +188,21 @@ export function SignupForm() {
         className="btn-neon w-full rounded-md py-3 text-sm disabled:opacity-60"
       >
         {loading ? 'Création du compte…' : 'Lancer mon aventure'}
+      </button>
+
+      <div className="relative my-2 flex items-center text-xs text-[color:var(--color-text-muted)]">
+        <span className="flex-1 border-t border-[color:var(--color-border-default)]" />
+        <span className="px-3">ou</span>
+        <span className="flex-1 border-t border-[color:var(--color-border-default)]" />
+      </div>
+
+      <button
+        type="button"
+        onClick={handleGoogle}
+        disabled={loading}
+        className="w-full rounded-md border border-[color:var(--color-border-bright)] bg-[color:var(--color-bg-elevated)] py-3 text-sm font-semibold transition hover:bg-[color:var(--color-bg-card-hover)] disabled:opacity-60"
+      >
+        S&rsquo;inscrire avec Google
       </button>
     </form>
   );
