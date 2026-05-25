@@ -17,6 +17,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
@@ -151,6 +152,15 @@ export function LoginForm() {
       >
         {loading ? 'Connexion…' : 'Se connecter'}
       </button>
+
+      <p className="text-center text-xs">
+        <Link
+          href="/forgot-password"
+          className="text-[color:var(--color-text-secondary)] hover:text-glow-cyan hover:underline"
+        >
+          Mot de passe oublié ?
+        </Link>
+      </p>
 
       <div className="relative my-2 flex items-center text-xs text-[color:var(--color-text-muted)]">
         <span className="flex-1 border-t border-[color:var(--color-border-default)]" />
