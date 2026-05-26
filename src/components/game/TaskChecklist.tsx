@@ -23,6 +23,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Zap, Calendar, CheckCircle2, Lock, AlertCircle, Star, Sparkles, Sun } from 'lucide-react';
 import { completeTaskAction } from './actions';
+import { useCelebrate } from '@/lib/celebrations/store';
 import { frequencyLabel, type ObjectiveProgress, type TaskProgress } from '@/lib/quests';
 
 interface Task {
@@ -77,6 +78,7 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
   // `pending` : true pendant qu'une Server Action est en cours (évite double-clic)
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const { celebrate } = useCelebrate();
 
   /**
    * Gestion du clic sur une tâche.
@@ -103,6 +105,24 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
           return next;
         });
       } else {
+        // Célébrations à déclencher selon ce qu'a retourné le serveur.
+        // XP gain → petit floater. Jour parfait → bandeau vert.
+        // (Level up, star, trophy → commit suivant)
+        if (result?.xpGain && result.xpGain > 0) {
+          celebrate({ kind: 'xp', amount: result.xpGain });
+        }
+        if (result?.dailyBonusAwarded) {
+          // Retrouver l'objectif qui contient la tâche pour avoir son titre
+          const parent = objectives.find((o) => o.tasks.some((t) => t.id === taskId));
+          if (parent) {
+            const dailyBonusXp = Math.max(10, Math.round(parent.xp_reward / 10));
+            celebrate({
+              kind: 'perfect-day',
+              objectiveTitle: parent.title,
+              xpBonus: dailyBonusXp,
+            });
+          }
+        }
         // Succès : rafraîchir les données serveur (XP, barre de progression, trophées...)
         router.refresh();
       }
