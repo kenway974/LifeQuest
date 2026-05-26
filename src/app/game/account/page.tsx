@@ -12,11 +12,17 @@ export const metadata = { title: 'Mon compte' };
  * Ici on gère l'identité (pseudo), les credentials (email, mot de passe), et la
  * suppression de compte (zone de danger).
  */
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const { error: errorParam } = await searchParams;
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -37,6 +43,15 @@ export default async function AccountPage() {
       <p className="mb-8 text-sm text-[color:var(--color-text-secondary)]">
         Modifier ton pseudo, ton email, ton mot de passe.
       </p>
+
+      {errorParam && (
+        <p
+          role="alert"
+          className="mb-6 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+        >
+          {errorParam}
+        </p>
+      )}
 
       <AccountForms
         initialPseudo={profile?.pseudo ?? ''}

@@ -16,10 +16,12 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle } from 'lucide-react';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
+import { deleteAccountAction } from './actions';
 
 const PseudoSchema = z
   .string()
@@ -42,7 +44,107 @@ export function AccountForms({ initialPseudo, initialEmail }: Props) {
       <PseudoForm initialPseudo={initialPseudo} />
       <EmailForm initialEmail={initialEmail} />
       <PasswordForm />
+      <DangerZone pseudo={initialPseudo} />
     </div>
+  );
+}
+
+/* -------------------- Zone de danger : suppression de compte -------------------- */
+
+/**
+ * Pattern "type-to-confirm" (à la GitHub).
+ * Le bouton n'est activé que si l'utilisateur a tapé son pseudo EXACT.
+ * Ça force un geste conscient et empêche les clics accidentels.
+ */
+function DangerZone({ pseudo }: { pseudo: string }) {
+  const [confirm, setConfirm] = useState('');
+  const [opened, setOpened] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const canDelete = confirm === pseudo;
+
+  function handleDelete() {
+    if (!canDelete) return;
+    startTransition(async () => {
+      // L'action redirige toujours (vers / si succès, vers /game/account?error=
+      // si problème). On ne reçoit jamais de retour ici en cas de succès.
+      await deleteAccountAction(confirm);
+    });
+  }
+
+  if (!opened) {
+    return (
+      <section className="rounded-lg border border-red-500/30 bg-red-950/15 p-6">
+        <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold text-red-300">
+          <AlertTriangle className="h-5 w-5" />
+          Zone de danger
+        </h2>
+        <p className="mb-4 text-xs text-[color:var(--color-text-muted)]">
+          Supprimer définitivement ton compte et toutes tes données : quêtes,
+          stats, étoiles, trophées, achats. Cette action est{' '}
+          <strong className="text-red-200">irréversible</strong>.
+        </p>
+        <button
+          type="button"
+          onClick={() => setOpened(true)}
+          className="rounded-md border border-red-500/50 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10"
+        >
+          Supprimer mon compte…
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-lg border-2 border-red-500/60 bg-red-950/20 p-6">
+      <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold text-red-300">
+        <AlertTriangle className="h-5 w-5" />
+        Confirmer la suppression
+      </h2>
+      <p className="mb-3 text-sm text-red-200">
+        Tu vas perdre <strong>définitivement</strong> :
+      </p>
+      <ul className="mb-4 space-y-1 pl-5 text-xs text-[color:var(--color-text-secondary)]">
+        <li className="list-disc">Ton historique de quêtes et ta progression</li>
+        <li className="list-disc">Tes étoiles, trophées et XP accumulés</li>
+        <li className="list-disc">Ta fiche perso et tes caractéristiques</li>
+        <li className="list-disc">Tes quêtes personnalisées créées</li>
+        <li className="list-disc">Tes achats (aucun remboursement automatique)</li>
+      </ul>
+
+      <label className="mb-1.5 block text-xs font-medium text-[color:var(--color-text-secondary)]">
+        Pour confirmer, tape ton pseudo : <strong className="text-red-200">{pseudo}</strong>
+      </label>
+      <input
+        type="text"
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        autoComplete="off"
+        className="mb-4 w-full rounded-md border border-red-500/40 bg-red-950/30 px-4 py-2.5 text-sm text-red-100 focus:border-red-400 focus:outline-none"
+        placeholder={pseudo}
+      />
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={!canDelete || pending}
+          className="rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-red-600"
+        >
+          {pending ? 'Suppression…' : 'Supprimer définitivement'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpened(false);
+            setConfirm('');
+          }}
+          disabled={pending}
+          className="rounded-md border border-[color:var(--color-border-bright)] px-5 py-2 text-sm transition hover:bg-[color:var(--color-bg-card-hover)] disabled:opacity-50"
+        >
+          Annuler
+        </button>
+      </div>
+    </section>
   );
 }
 
