@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { GameHeader } from '@/components/game/GameHeader';
 import { BackgroundRenderer } from '@/components/game/BackgroundRenderer';
+import { CelebrationOverlay } from '@/components/celebrations/CelebrationOverlay';
 
 /**
  * Protected layout for the authenticated app.
@@ -54,6 +55,9 @@ export default async function GameLayout({ children }: { children: React.ReactNo
       <main id="main-content" className="relative z-10">
         {children}
       </main>
+      {/* Global celebration overlay — mounted here to ensure ONE queue
+          across all game routes (level ups, stars, perfect days, etc.). */}
+      <CelebrationOverlay />
     </div>
   );
 }
