@@ -218,7 +218,10 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
     .eq('id', userQuestId);
 
   // 9. Trophy check (non-blocking)
-  await checkTrophyUnlocks(supabase, user.id, { newLevel, leveledUp });
+  const unlockedTrophies = await checkTrophyUnlocks(supabase, user.id, {
+    newLevel,
+    leveledUp,
+  });
 
   revalidatePath('/game');
   revalidatePath('/game/character');
@@ -234,6 +237,7 @@ export async function completeTaskAction(userQuestId: string, taskId: string) {
     questJustCompleted: wasJustCompleted,
     starEarned: earnedStar,
     xpGain: xpGain + questXpBonus,
+    unlockedTrophies,
   };
 }
 
@@ -359,13 +363,22 @@ async function computeQuestProgress(
  * `findCode(code)` : helper local qui cherche un trophée par son code
  * et vérifie qu'il n'est pas déjà obtenu, retourne son ID ou undefined.
  */
+export interface UnlockedTrophy {
+  title: string;
+  description: string;
+  rarity: string;
+  xpReward: number;
+}
+
 async function checkTrophyUnlocks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   ctx: { newLevel: number; leveledUp: boolean },
-) {
-  const { data: trophies } = await supabase.from('trophies').select('id, code');
-  if (!trophies) return;
+): Promise<UnlockedTrophy[]> {
+  const { data: trophies } = await supabase
+    .from('trophies')
+    .select('id, code, title, description, rarity, xp_reward');
+  if (!trophies) return [];
 
   const { data: owned } = await supabase
     .from('user_trophies')
@@ -519,4 +532,15 @@ async function checkTrophyUnlocks(
       .from('user_trophies')
       .insert(toUnlock.map((trophy_id) => ({ user_id: userId, trophy_id })));
   }
+
+  // Return the full meta of unlocked trophies so the client can celebrate.
+  return toUnlock.map((id) => {
+    const t = trophies.find((x) => x.id === id)!;
+    return {
+      title: t.title,
+      description: t.description,
+      rarity: t.rarity,
+      xpReward: t.xp_reward,
+    };
+  });
 }

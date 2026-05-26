@@ -12,6 +12,7 @@ import { XpFloater } from './XpFloater';
 import { PerfectDayBanner } from './PerfectDayBanner';
 import { LevelUpOverlay } from './LevelUpOverlay';
 import { StarBurst } from './StarBurst';
+import { TrophyReveal } from './TrophyReveal';
 
 export function CelebrationOverlay() {
   const current = useCelebrationStore((s) => s.queue[0]);
@@ -49,6 +50,16 @@ function renderCelebration(
       return <LevelUpOverlay newLevel={event.newLevel} onDone={onDone} />;
     case 'star':
       return <StarBurst questTitle={event.questTitle} onDone={onDone} />;
+    case 'trophy':
+      return (
+        <TrophyReveal
+          title={event.title}
+          description={event.description}
+          rarity={event.rarity}
+          xpReward={event.xpReward}
+          onDone={onDone}
+        />
+      );
     default:
       // Unknown event types auto-shift to avoid stalling the queue
       queueMicrotask(onDone);

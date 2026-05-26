@@ -129,9 +129,23 @@ export function TaskChecklist({ userQuestId, questTitle, objectives }: Props) {
         if (result?.starEarned) {
           celebrate({ kind: 'star', questTitle });
         }
-        // Level up (après tous les autres : c'est le plus marquant, on garde la fin)
+        // Level up
         if (result?.leveledUp && result?.newLevel) {
           celebrate({ kind: 'level-up', newLevel: result.newLevel });
+        }
+        // Trophées débloqués (parfois plusieurs d'un coup — on les empile)
+        // Mis à la fin : le user lit la description en dernier, les autres
+        // célébrations sont déjà passées, donc pas d'interruption.
+        if (result?.unlockedTrophies && result.unlockedTrophies.length > 0) {
+          for (const t of result.unlockedTrophies) {
+            celebrate({
+              kind: 'trophy',
+              title: t.title,
+              description: t.description,
+              rarity: t.rarity,
+              xpReward: t.xpReward,
+            });
+          }
         }
         // Succès : rafraîchir les données serveur (XP, barre de progression, trophées...)
         router.refresh();
