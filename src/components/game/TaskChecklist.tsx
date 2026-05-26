@@ -47,6 +47,8 @@ interface Objective {
 
 interface Props {
   userQuestId: string;
+  /** Used in star/level-up celebrations to reference the quest by name. */
+  questTitle: string;
   objectives: Objective[];
 }
 
@@ -55,7 +57,7 @@ function formatFr(ymd: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-export function TaskChecklist({ userQuestId, objectives }: Props) {
+export function TaskChecklist({ userQuestId, questTitle, objectives }: Props) {
   /**
    * `completedToday` : Set des IDs de tâches validées aujourd'hui.
    * Initialisé depuis les données serveur (tâches déjà faites aujourd'hui).
@@ -122,6 +124,14 @@ export function TaskChecklist({ userQuestId, objectives }: Props) {
               xpBonus: dailyBonusXp,
             });
           }
+        }
+        // Étoile débloquée — la quête vient d'être finie parfaitement
+        if (result?.starEarned) {
+          celebrate({ kind: 'star', questTitle });
+        }
+        // Level up (après tous les autres : c'est le plus marquant, on garde la fin)
+        if (result?.leveledUp && result?.newLevel) {
+          celebrate({ kind: 'level-up', newLevel: result.newLevel });
         }
         // Succès : rafraîchir les données serveur (XP, barre de progression, trophées...)
         router.refresh();

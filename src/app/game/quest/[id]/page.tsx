@@ -149,6 +149,7 @@ export default async function ActiveQuestPage({
 
       <TaskChecklist
         userQuestId={userQuestId}
+        questTitle={userQuest.quest.title}
         objectives={objectives.map((obj) => ({
           id: obj.id,
           title: obj.title,
