@@ -11,8 +11,8 @@
 
 LifeQuest transforme ton développement personnel en aventure immersive façon jeu vidéo :
 
-- **Quêtes principales** (30-90 jours) pour les grandes transformations de vie
-- **Quêtes secondaires** (7-30 jours) en parallèle pour rester flexible
+- **Quêtes principales** (30-90 jours) : des _packages_ au titre abstrait et directionnel (« Devenir un chien de la casse », « Devenir entrepreneur », « La maîtrise du corps »…) regroupant plusieurs objectifs et tâches qui tirent dans la même direction pour franchir une étape de vie
+- **Quêtes secondaires** (3-30 jours) : des défis directs et monolithiques, un objectif clair et autonome (« Immunisé au rejet », « Devenir Wim Hof », « Composer une musique », « Lire un livre »…)
 - **Quêtes personnalisées** (premium 2€ à vie) pour créer tes propres défis
 - **Système XP & niveaux** : chaque tâche validée fait progresser
 - **9 caractéristiques RPG** : Force, Cardio, Endurance, Focus, Discipline, Calme, Émotion, Créativité, Social — évoluent selon les quêtes complétées
@@ -106,7 +106,7 @@ Puis remplis toutes les variables comme indiqué ci-dessus.
 npm run db:seed
 ```
 
-Cela ajoute ~15 quêtes principales, ~20 quêtes secondaires et 30 trophées au catalogue.
+Cela ajoute ~37 quêtes principales, ~190 quêtes secondaires (couvrant corps, esprit, émotions, spiritualité, discipline, finance, social, créativité, détox, minimalisme, aventure…) et 50+ trophées au catalogue. Les quêtes d’extension vivent dans `src/data/quests/expansion-*.ts` (chaque module co-localise ses quêtes, ses impacts de stats et ses métadonnées de découverte).
 
 > Pour ajouter du contenu **sans écraser** les données existantes (utile en prod) :
 > ```bash

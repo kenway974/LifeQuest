@@ -10,27 +10,17 @@
  * — no migration needed, no risk of seed/code drift, and reviewable in PR.
  */
 
-export type QuestTheme =
-  | 'body'
-  | 'mind'
-  | 'discipline'
-  | 'focus'
-  | 'finance'
-  | 'creative'
-  | 'social'
-  | 'detox'
-  | 'minimalism'
-  | 'emotions'
-  | 'spirituality';
+import { EXPANSION_META } from '@/data/quests';
+import type {
+  QuestContext,
+  QuestMetaSeed,
+  QuestTheme,
+} from '@/data/quests/types';
 
-export type QuestContext = 'reset' | 'improve' | 'challenge';
+// Re-export the discovery enums so existing importers keep their import path.
+export type { QuestContext, QuestTheme };
 
-interface QuestMeta {
-  themes: QuestTheme[];         // ordered by primary → secondary
-  context: QuestContext[];
-  /** One-sentence sales pitch for the discovery card. */
-  summary: string;
-}
+type QuestMeta = QuestMetaSeed;
 
 /**
  * Catalog metadata. Keys are quest titles (exact match with seed).
@@ -237,7 +227,7 @@ const META: Record<string, QuestMeta> = {
 };
 
 export function getQuestMeta(title: string): QuestMeta | null {
-  return META[title] ?? null;
+  return META[title] ?? EXPANSION_META[title] ?? null;
 }
 
 // ============================================================
