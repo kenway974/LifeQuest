@@ -5,6 +5,7 @@ import { difficultyColors } from '@/lib/utils';
 import { ArrowLeft, Clock, Zap, Target, Play, Calendar } from 'lucide-react';
 import { startQuestAction } from './actions';
 import { frequencyLabel } from '@/lib/quests';
+import { QuestTypeBadge } from '@/components/game/QuestTypeBadge';
 
 export default async function QuestDetailPage({
   params,
@@ -64,12 +65,15 @@ export default async function QuestDetailPage({
       <div
         className={`card-neon border-difficulty-${quest.difficulty} mb-8 border-2 p-8`}
       >
-        <span
-          className="mb-3 inline-block font-display text-xs font-black uppercase tracking-wider"
-          style={{ color: diff.hex }}
-        >
-          {diff.name}
-        </span>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <QuestTypeBadge type={quest.type} />
+          <span
+            className="font-display text-xs font-black uppercase tracking-wider"
+            style={{ color: diff.hex }}
+          >
+            {diff.name}
+          </span>
+        </div>
         <h1 className="mb-3 font-display text-3xl font-black md:text-4xl">{quest.title}</h1>
         <p className="text-[color:var(--color-text-secondary)]">{quest.description}</p>
 

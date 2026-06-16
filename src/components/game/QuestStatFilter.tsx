@@ -21,6 +21,7 @@ import { useState } from 'react';
 import { STAT_DEFS, type StatKey } from '@/lib/character-stats';
 import { QuestCard } from '@/components/game/QuestCard';
 import { type Difficulty } from '@/lib/utils';
+import { type QuestType } from '@/lib/quest-type';
 
 // Type étendu d'une quête, enrichi avec la liste des stats qu'elle entraîne
 export type QuestWithStats = {
@@ -31,6 +32,7 @@ export type QuestWithStats = {
   duration_days: number;
   xp_reward: number;
   icon: string | null;
+  type?: QuestType; // principale / secondaire / personnalisée (affiché en pastille)
   statKeys: StatKey[]; // stats entraînées par cette quête (calculé depuis les objectifs)
 };
 
@@ -125,6 +127,7 @@ export function QuestStatFilter({ quests, activeIds, disabledIds }: Props) {
             <QuestCard
               key={quest.id}
               quest={quest}
+              type={quest.type}
               isActive={activeIds.has(quest.id)}
               disabled={disabledIds?.has(quest.id) ?? false}
             />

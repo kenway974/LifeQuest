@@ -23,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { difficultyColors } from '@/lib/utils';
+import { QuestTypeBadge } from '@/components/game/QuestTypeBadge';
 import {
   scoreCatalog,
   type CatalogQuest,
@@ -335,7 +336,8 @@ function ResultsView({
                       #{i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex flex-wrap items-baseline gap-2">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        {r.type !== 'custom' && <QuestTypeBadge type={r.type} />}
                         <h3 className="font-display text-lg font-bold">{r.title}</h3>
                         <span
                           className="text-[10px] font-black uppercase tracking-widest"
