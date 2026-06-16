@@ -10,45 +10,26 @@
  *  2. Run `npm run db:seed:add` to push the new content without touching
  *     existing rows or user progression
  */
-import type { Database } from '../src/types/database';
+import {
+  EXPANSION_MAIN_QUESTS,
+  EXPANSION_SECONDARY_QUESTS,
+} from '../src/data/quests';
+import type {
+  Difficulty,
+  ObjectiveSeed,
+  QuestSeed,
+  TaskSeed,
+} from '../src/data/quests/types';
 
-type Difficulty = Database['public']['Enums']['difficulty'];
-
-// ============================================================
-// TYPES
-// ============================================================
-
-export interface TaskSeed {
-  title: string;
-  xp_reward: number;
-  /** Frequency in days. 1 = daily, 7 = weekly, 30 = monthly, 365 = once. Defaults to 1. */
-  frequency_days?: number;
-  /** Bonus task: XP × 1.5, doesn't block objective completion, all of them must be done to earn a star. */
-  is_optional?: boolean;
-}
-
-export interface ObjectiveSeed {
-  title: string;
-  description: string;
-  xp_reward: number;
-  tasks: TaskSeed[];
-}
-
-export interface QuestSeed {
-  title: string;
-  description: string;
-  type: 'main' | 'secondary';
-  difficulty: Difficulty;
-  duration_days: number;
-  xp_reward: number;
-  objectives: ObjectiveSeed[];
-}
+// Re-export the shared catalog types so existing importers keep working.
+export type { Difficulty, ObjectiveSeed, QuestSeed, TaskSeed };
 
 // ============================================================
-// MAIN QUESTS — 15 quests, 3-5 objectives each, varied frequencies
+// MAIN QUESTS (base catalog) — abstract, directional packages.
+// The full MAIN_QUESTS export below merges these with the expansion modules.
 // ============================================================
 
-export const MAIN_QUESTS: QuestSeed[] = [
+const BASE_MAIN_QUESTS: QuestSeed[] = [
   {
     title: 'Reprendre le contrôle de sa vie',
     description: 'Un parcours de 60 jours pour reprendre les rênes — vision, discipline, focus.',
@@ -943,10 +924,11 @@ export const MAIN_QUESTS: QuestSeed[] = [
 ];
 
 // ============================================================
-// SECONDARY QUESTS — 20 quests, 2-3 objectives each, 1-3 tasks each
+// SECONDARY QUESTS (base catalog) — direct, monolithic goals.
+// The full SECONDARY_QUESTS export below merges these with the expansion modules.
 // ============================================================
 
-export const SECONDARY_QUESTS: QuestSeed[] = [
+const BASE_SECONDARY_QUESTS: QuestSeed[] = [
   {
     title: '7 jours sans plainte',
     description: 'Une semaine entière sans se plaindre de rien.',
@@ -1525,6 +1507,23 @@ export const SECONDARY_QUESTS: QuestSeed[] = [
       },
     ],
   },
+];
+
+// ============================================================
+// FULL CATALOG — base quests + domain expansion modules.
+// Expansion quests live under src/data/quests/expansion-*.ts (co-located with
+// their stat impacts and discovery metadata). Run `npm run db:seed:add` to push
+// new content without touching existing rows or user progression.
+// ============================================================
+
+export const MAIN_QUESTS: QuestSeed[] = [
+  ...BASE_MAIN_QUESTS,
+  ...EXPANSION_MAIN_QUESTS,
+];
+
+export const SECONDARY_QUESTS: QuestSeed[] = [
+  ...BASE_SECONDARY_QUESTS,
+  ...EXPANSION_SECONDARY_QUESTS,
 ];
 
 // ============================================================

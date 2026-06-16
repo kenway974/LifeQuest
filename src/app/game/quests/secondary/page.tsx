@@ -50,6 +50,7 @@ export default async function SecondaryQuestsPage() {
       duration_days: quest.duration_days,
       xp_reward: quest.xp_reward,
       icon: quest.icon,
+      type: 'secondary' as const,
       statKeys: Array.from(statKeySet),
     };
   });
@@ -72,7 +73,7 @@ export default async function SecondaryQuestsPage() {
         Quêtes <span className="text-glow-cyan">secondaires</span>
       </h1>
       <p className="mb-2 text-[color:var(--color-text-secondary)]">
-        Missions plus courtes, en parallèle d&apos;une quête principale.
+        Des défis directs et ciblés : un seul objectif clair, à relever en parallèle (3 à 30 jours).
       </p>
       <p className="mb-8 text-sm text-[color:var(--color-text-muted)]">
         Quêtes actives : <span className="text-glow-cyan font-bold">{activeSecondaryCount}/{maxAllowed}</span>

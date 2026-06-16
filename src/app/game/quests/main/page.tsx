@@ -48,6 +48,7 @@ export default async function MainQuestsPage() {
       duration_days: quest.duration_days,
       xp_reward: quest.xp_reward,
       icon: quest.icon,
+      type: 'main' as const,
       statKeys: Array.from(statKeySet),
     };
   });
@@ -65,7 +66,8 @@ export default async function MainQuestsPage() {
         Quêtes <span className="text-glow-violet">principales</span>
       </h1>
       <p className="mb-2 text-[color:var(--color-text-secondary)]">
-        Parcours de transformation de 30 à 90 jours. Tu peux avoir jusqu'à 2 quêtes principales actives simultanément.
+        Les grands parcours de ta vie : un cap, plusieurs objectifs et tâches qui tirent dans la même
+        direction (30 à 90 jours). Jusqu'à 2 actives en même temps.
       </p>
       <p className="mb-8 text-sm text-[color:var(--color-text-muted)]">
         Quêtes actives : <span className="text-glow-violet font-bold">{activeMainCount}/2</span>

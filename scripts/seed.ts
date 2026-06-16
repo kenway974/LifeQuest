@@ -76,6 +76,7 @@ async function seed() {
           title: obj.title,
           description: obj.description,
           xp_reward: obj.xp_reward,
+          stat_impacts: obj.stat_impacts ?? {},
           order_index: i,
         })
         .select('id')

@@ -18,6 +18,8 @@ import Link from 'next/link';
 import { difficultyColors } from '@/lib/utils';
 import { Clock, Zap, Check } from 'lucide-react';
 import type { Database } from '@/types/database';
+import { QuestTypeBadge } from '@/components/game/QuestTypeBadge';
+import type { QuestType } from '@/lib/quest-type';
 
 // On n'extrait que les champs nécessaires de la table `quests` (pattern Pick<>)
 type Quest = Pick<
@@ -27,6 +29,7 @@ type Quest = Pick<
 
 interface Props {
   quest: Quest;
+  type?: QuestType;     // principale / secondaire / personnalisée (affiche une pastille)
   isActive?: boolean;   // le joueur a cette quête en cours
   disabled?: boolean;   // carte non cliquable (limite atteinte, etc.)
 }
@@ -37,7 +40,7 @@ interface Props {
  *   + `pointer-events-none` empêche le clic au niveau CSS.
  * `aria-disabled` : signale l'état désactivé aux lecteurs d'écran (accessibilité).
  */
-export function QuestCard({ quest, isActive, disabled }: Props) {
+export function QuestCard({ quest, type, isActive, disabled }: Props) {
   // Récupère les infos de couleur/nom pour la difficulté de cette quête
   const diff = difficultyColors[quest.difficulty];
 
@@ -49,21 +52,25 @@ export function QuestCard({ quest, isActive, disabled }: Props) {
       }`}
       aria-disabled={disabled}
     >
-      {isActive && (
-        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[color:var(--color-neon-cyan)] px-2 py-0.5 text-[10px] font-bold uppercase text-black">
-          <Check className="h-3 w-3" /> En cours
-        </span>
+      {/* En-tête : type de quête (gauche) + état "en cours" (droite) */}
+      {(type || isActive) && (
+        <div className="flex items-center justify-between gap-2">
+          {type ? <QuestTypeBadge type={type} /> : <span />}
+          {isActive && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-neon-cyan)] px-2 py-0.5 text-[10px] font-bold uppercase text-black">
+              <Check className="h-3 w-3" /> En cours
+            </span>
+          )}
+        </div>
       )}
 
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-display text-lg font-bold leading-tight">{quest.title}</h3>
-      </div>
+      <h3 className="font-display text-lg font-bold leading-tight">{quest.title}</h3>
 
       <p className="line-clamp-3 text-sm text-[color:var(--color-text-secondary)]">
         {quest.description}
       </p>
 
-      <div className="mt-auto flex items-center justify-between border-t border-[color:var(--color-border-default)] pt-3 text-xs">
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[color:var(--color-border-default)] pt-3 text-xs">
         <span
           className="font-display font-bold uppercase tracking-wider"
           style={{ color: diff.hex }}
@@ -71,11 +78,11 @@ export function QuestCard({ quest, isActive, disabled }: Props) {
           {diff.name}
         </span>
         <span className="flex items-center gap-3 text-[color:var(--color-text-muted)]">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" /> {quest.duration_days}j
+          <span className="inline-flex items-center gap-1" title="Durée de la quête">
+            <Clock className="h-3.5 w-3.5" /> {quest.duration_days} j
           </span>
-          <span className="inline-flex items-center gap-1 text-glow-cyan">
-            <Zap className="h-3.5 w-3.5" /> {quest.xp_reward}
+          <span className="inline-flex items-center gap-1 text-glow-cyan" title="Récompense en XP">
+            <Zap className="h-3.5 w-3.5" /> {quest.xp_reward} XP
           </span>
         </span>
       </div>
