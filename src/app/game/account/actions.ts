@@ -14,7 +14,7 @@ import type { Database } from '@/types/database';
  *
  * Le DELETE en cascade des tables suivantes nettoie tout :
  *   profiles, user_quests, user_tasks, user_trophies, objective_daily_completions,
- *   push_subscriptions, user_settings, purchases.
+ *   push_subscriptions, user_settings.
  *
  * Sécurité :
  *   - On exige que le pseudo tapé corresponde au pseudo réel (anti-clic accidentel

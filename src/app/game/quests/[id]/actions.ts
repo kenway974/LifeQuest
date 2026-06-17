@@ -5,7 +5,6 @@
  *   Règles métier appliquées côté serveur (ne jamais faire confiance au client) :
  *   - Max 2 quêtes principales actives simultanément
  *   - Quêtes secondaires : 5 max sans quête principale, 3 avec 1 principale, 0 avec 2 principales
- *   - Quêtes personnalisées : require has_custom_quests = true (payant)
  *
  * Pourquoi toujours `redirect()` au lieu de retourner une valeur ?
  *   Cette action est bindée à un formulaire HTML (`action={startQuestAction.bind(null, id)}`).
@@ -69,17 +68,6 @@ export async function startQuestAction(questId: string, formData: FormData): Pro
       } else {
         fail(`Limite atteinte (${maxSecondary} quêtes secondaires max avec ${mainCount} quête${mainCount > 1 ? 's' : ''} principale${mainCount > 1 ? 's' : ''}).`);
       }
-    }
-  }
-
-  if (quest!.type === 'custom') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('has_custom_quests')
-      .eq('id', user.id)
-      .single();
-    if (!profile?.has_custom_quests) {
-      fail('Quêtes personnalisées non débloquées (2€ à vie).');
     }
   }
 

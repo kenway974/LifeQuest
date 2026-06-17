@@ -1,27 +1,10 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
 import { ArrowLeft } from 'lucide-react';
 import { CustomQuestForm } from './form';
 
 export const metadata = { title: 'Créer une quête' };
 
 export default async function NewCustomQuestPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('has_custom_quests')
-    .eq('id', user!.id)
-    .single();
-
-  if (!profile?.has_custom_quests) {
-    redirect('/game/quests/custom');
-  }
-
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <Link

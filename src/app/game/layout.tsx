@@ -20,7 +20,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, pseudo, avatar_url, level, xp, has_custom_quests')
+    .select('id, pseudo, avatar_url, level, xp')
     .eq('id', user.id)
     .single();
 

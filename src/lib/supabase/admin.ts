@@ -13,7 +13,6 @@
  *    - ⚠️ NE JAMAIS exposer cette clé au navigateur
  *
  * Cas d'usage légitimes (tous côté serveur seulement) :
- *   - Webhooks Stripe : débloquer le compte de l'utilisateur après paiement
  *   - Cron jobs : lire les données de tous les utilisateurs pour les notifications
  *   - Scripts de seed : insérer des données de départ dans la base
  */

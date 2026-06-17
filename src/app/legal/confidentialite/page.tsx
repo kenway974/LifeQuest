@@ -25,7 +25,6 @@ export default function ConfidentialitePage() {
           <li>Email et mot de passe (chiffré) pour l’authentification.</li>
           <li>Pseudo, avatar, progression de jeu (XP, niveaux, quêtes, trophées).</li>
           <li>Endpoints de notifications push (si tu les actives).</li>
-          <li>Historique de paiement Stripe (si tu achètes les quêtes personnalisées).</li>
         </ul>
 
         <h2 className="mt-6 font-display text-xl font-bold">Tes droits (RGPD)</h2>

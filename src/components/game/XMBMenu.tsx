@@ -117,7 +117,7 @@ function buildCategories(activeQuest: ActiveQuestSummary | null): XMBCategory[] 
     {
       id: 'custom',
       label: 'Quêtes personnalisées',
-      description: 'Crée tes propres aventures. (Premium 2 € à vie)',
+      description: 'Crée tes propres aventures sur-mesure.',
       href: '/game/quests/custom',
       icon: Sparkles,
     },

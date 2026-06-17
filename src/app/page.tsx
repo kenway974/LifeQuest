@@ -102,7 +102,7 @@ export default function HomePage() {
           <FeatureCard
             icon={<Sparkles />}
             title="Quêtes personnalisées"
-            description="Crée tes propres aventures. Débloque cette feature à vie pour 2€ symboliques."
+            description="Crée tes propres aventures sur-mesure : objectifs, tâches, durées et difficultés."
           />
         </div>
       </section>
