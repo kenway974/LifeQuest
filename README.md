@@ -33,7 +33,6 @@ LifeQuest transforme ton développement personnel en aventure immersive façon j
 - **État global** : [Zustand](https://zustand-demo.pmnd.rs)
 - **Data fetching** : [TanStack Query](https://tanstack.com/query)
 - **Auth + DB + Storage** : [Supabase](https://supabase.com) (PostgreSQL + Row Level Security)
-- **Paiements** : [Stripe Checkout](https://stripe.com) (paiement unique 2€)
 - **Notifications** : Web Push (VAPID) + Service Worker + cron Vercel
 - **Tests** : [Vitest](https://vitest.dev)
 - **Hébergement** : [Vercel](https://vercel.com) (recommandé)
@@ -47,7 +46,6 @@ LifeQuest transforme ton développement personnel en aventure immersive façon j
 - **Node.js** ≥ 22 (voir `.nvmrc`)
 - **npm** ≥ 10 (ou pnpm/yarn)
 - Un compte **Supabase** (gratuit) → [supabase.com](https://supabase.com)
-- Un compte **Stripe** (gratuit) si tu veux activer les paiements → [stripe.com](https://stripe.com)
 
 ### 1. Installer les dépendances
 
@@ -67,24 +65,15 @@ npm install
    - `0006_stats_visibility.sql` — Profil public / privé
    - `0007_optional_tasks_stars.sql` — Tâches facultatives + étoiles
    - `0008_objective_daily_completions.sql` — Historique journalier
+   - `0009_streak_freezes.sql` — Gels de série
+   - `0010_free_custom_quests.sql` — Quêtes personnalisées gratuites pour tous
 3. Récupère depuis **Settings → API** :
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (⚠️ secret)
 4. **Optionnel — Google OAuth** : Dans **Authentication → Providers**, active Google et suis les instructions.
 
-### 3. Configurer Stripe (optionnel pour le MVP local)
-
-1. Sur [dashboard.stripe.com](https://dashboard.stripe.com), récupère tes clés en mode **Test**.
-2. Crée un **Produit** → "Custom Quests Unlock" avec un prix unique de **2,00 €** (paiement unique, pas un abonnement).
-3. Copie le `price_id` (format `price_xxx`) dans `.env.local`.
-4. Pour les webhooks en local : utilise [Stripe CLI](https://stripe.com/docs/stripe-cli) :
-   ```bash
-   stripe listen --forward-to localhost:3000/api/stripe/webhook
-   ```
-   La commande affichera le `STRIPE_WEBHOOK_SECRET` (commence par `whsec_`).
-
-### 4. Générer les clés VAPID (notifications push)
+### 3. Générer les clés VAPID (notifications push)
 
 ```bash
 npx web-push generate-vapid-keys
@@ -92,7 +81,7 @@ npx web-push generate-vapid-keys
 
 Reporte les deux clés dans `.env.local` (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY`).
 
-### 5. Créer `.env.local`
+### 4. Créer `.env.local`
 
 ```bash
 cp .env.example .env.local
@@ -100,7 +89,7 @@ cp .env.example .env.local
 
 Puis remplis toutes les variables comme indiqué ci-dessus.
 
-### 6. Lancer le seed (peuple la DB avec les quêtes et trophées)
+### 5. Lancer le seed (peuple la DB avec les quêtes et trophées)
 
 ```bash
 npm run db:seed
@@ -113,7 +102,7 @@ Cela ajoute ~37 quêtes principales, ~190 quêtes secondaires (couvrant corps, e
 > npm run db:seed:add
 > ```
 
-### 7. Démarrer le serveur de développement
+### 6. Démarrer le serveur de développement
 
 ```bash
 npm run dev
@@ -164,7 +153,6 @@ lifequest/
 │   │   │   ├── customize/          # Personnalisation fond + thème
 │   │   │   └── settings/           # Paramètres + notifications push
 │   │   └── api/
-│   │       ├── stripe/             # Checkout + webhook
 │   │       ├── push/               # Inscription notifications
 │   │       └── cron/               # Cron Vercel — envoi push quotidien
 │   ├── components/
@@ -221,13 +209,8 @@ C'est le combo le plus rapide et le moins cher (gratuit jusqu'à plusieurs milli
 2. Importe le projet sur [vercel.com/new](https://vercel.com/new).
 3. Vercel détecte automatiquement Next.js. Configure les **environment variables** (toutes celles du `.env.example`).
 4. Pour `NEXT_PUBLIC_SITE_URL`, mets l'URL de production (ex: `https://lifequest.app`).
-5. Configure les webhooks Stripe en production :
-   - Dashboard Stripe → Webhooks → "Add endpoint"
-   - URL : `https://ton-domaine.com/api/stripe/webhook`
-   - Évents : `checkout.session.completed`
-   - Copie le `Signing secret` dans Vercel → `STRIPE_WEBHOOK_SECRET`
-6. Dans Supabase → **Authentication → URL Configuration** : ajoute ton domaine prod dans les redirect URLs.
-7. Le cron de notifications (`/api/cron/notify-tasks`) est déclenché une fois par jour via `vercel.json` — aucune config supplémentaire nécessaire.
+5. Dans Supabase → **Authentication → URL Configuration** : ajoute ton domaine prod dans les redirect URLs.
+6. Le cron de notifications (`/api/cron/notify-tasks`) est déclenché une fois par jour via `vercel.json` — aucune config supplémentaire nécessaire.
 
 ### Option 2 — Alternative auto-hébergement
 
@@ -248,8 +231,7 @@ Quelques points importants déjà gérés par le projet :
 - ✅ **Row Level Security** activée sur toutes les tables (chaque user ne voit que ses données)
 - ✅ **Headers de sécurité** : CSP, HSTS, X-Frame-Options, Referrer-Policy
 - ✅ **Validation côté serveur** : tous les formulaires passent par Zod
-- ✅ **Webhooks Stripe** : signature vérifiée côté serveur
-- ✅ **Service role key** : utilisée uniquement côté serveur (webhooks, seeds, cron)
+- ✅ **Service role key** : utilisée uniquement côté serveur (seeds, cron)
 - ✅ **Pas de secrets** dans le code ou les commits (`.env.local` ignoré)
 - ✅ **Profil public/privé** : les stats ne sont visibles par d'autres joueurs que si `stats_public = true`
 
@@ -273,7 +255,7 @@ Quelques points importants déjà gérés par le projet :
 - [x] Tâches facultatives récompensées en étoiles
 - [x] Système de recommandation de quêtes
 - [x] Notifications push (VAPID) + cron quotidien
-- [x] Paiement Stripe 2€ à vie
+- [x] Quêtes personnalisées gratuites pour tous
 - [x] Multi-thèmes (adaptatif + couleur d'accent)
 - [x] Personnalisation fond d'écran
 - [x] Profil public joueur (`/game/player/[pseudo]`)
@@ -290,7 +272,6 @@ Quelques points importants déjà gérés par le projet :
 - [ ] Application mobile native (React Native)
 - [ ] Système d'amis + guildes
 - [ ] Défis communautaires
-- [ ] Boutique de cosmétiques
 - [ ] Événements temporaires saisonniers
 - [ ] i18n (anglais en priorité)
 
@@ -300,9 +281,7 @@ Quelques points importants déjà gérés par le projet :
 
 **"Invalid environment variables"** au démarrage → vérifie que tu as bien copié `.env.example` en `.env.local` et rempli toutes les variables marquées requises.
 
-**"PGRST116" / RLS errors** → assure-toi d'avoir exécuté **toutes** les migrations (0001 à 0008) dans Supabase. Vérifie aussi que le trigger `on_auth_user_created` est bien créé.
-
-**Le webhook Stripe ne se déclenche pas en local** → utilise `stripe listen --forward-to localhost:3000/api/stripe/webhook`. En prod, vérifie que l'endpoint est bien configuré dans le dashboard Stripe.
+**"PGRST116" / RLS errors** → assure-toi d'avoir exécuté **toutes** les migrations (0001 à 0010) dans Supabase. Vérifie aussi que le trigger `on_auth_user_created` est bien créé.
 
 **Les notifications push ne marchent pas** → vérifie que `NEXT_PUBLIC_VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` sont bien définies, et que le navigateur supporte les push (Safari iOS < 16.4 ne supporte pas).
 

@@ -31,13 +31,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // Stripe + Supabase need their domains
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://va.vercel-scripts.com",
+              // Supabase needs its domains
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
-              "frame-src https://js.stripe.com https://hooks.stripe.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
               "media-src 'self' https://*.supabase.co blob:",
               "worker-src 'self' blob:",
               "frame-ancestors 'none'",

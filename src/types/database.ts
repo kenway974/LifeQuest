@@ -108,7 +108,6 @@ export type Database = {
           cached_stats: Json
           cached_stats_at: string | null
           created_at: string
-          has_custom_quests: boolean
           id: string
           level: number
           pseudo: string
@@ -124,7 +123,6 @@ export type Database = {
           cached_stats?: Json
           cached_stats_at?: string | null
           created_at?: string
-          has_custom_quests?: boolean
           id: string
           level?: number
           pseudo: string
@@ -140,7 +138,6 @@ export type Database = {
           cached_stats?: Json
           cached_stats_at?: string | null
           created_at?: string
-          has_custom_quests?: boolean
           id?: string
           level?: number
           pseudo?: string
@@ -151,50 +148,6 @@ export type Database = {
           xp?: number
         }
         Relationships: []
-      }
-      purchases: {
-        Row: {
-          amount_cents: number
-          created_at: string
-          currency: string
-          id: string
-          product: string
-          status: string
-          stripe_payment_intent: string | null
-          stripe_session_id: string
-          user_id: string
-        }
-        Insert: {
-          amount_cents: number
-          created_at?: string
-          currency?: string
-          id?: string
-          product: string
-          status: string
-          stripe_payment_intent?: string | null
-          stripe_session_id: string
-          user_id: string
-        }
-        Update: {
-          amount_cents?: number
-          created_at?: string
-          currency?: string
-          id?: string
-          product?: string
-          status?: string
-          stripe_payment_intent?: string | null
-          stripe_session_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       push_subscriptions: {
         Row: {

@@ -26,12 +26,12 @@ import type { Database } from '@/types/database';
 
 /**
  * `Pick` est un utilitaire TypeScript qui extrait seulement certaines propriétés d'un type.
- * Ici on prend 6 champs de la ligne complète `profiles` — juste ce dont le header a besoin.
- * Avantage : si la table `profiles` a 20 colonnes, on ne charge que les 6 utiles.
+ * Ici on prend 5 champs de la ligne complète `profiles` — juste ce dont le header a besoin.
+ * Avantage : si la table `profiles` a 20 colonnes, on ne charge que les 5 utiles.
  */
 type Profile = Pick<
   Database['public']['Tables']['profiles']['Row'],
-  'id' | 'pseudo' | 'avatar_url' | 'level' | 'xp' | 'has_custom_quests'
+  'id' | 'pseudo' | 'avatar_url' | 'level' | 'xp'
 >;
 
 export function GameHeader({ profile }: { profile: Profile }) {

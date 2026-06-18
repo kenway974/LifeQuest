@@ -5,8 +5,6 @@
  * Les objectifs et tâches sont ajoutés ENSUITE dans l'éditeur (/custom/[id]/edit).
  *
  * Points importants :
- *   - Vérification d'entitlement : l'utilisateur doit avoir `has_custom_quests = true`
- *     (débloqqué après paiement Stripe)
  *   - `is_published: false` : la quête est privée jusqu'à ce que l'utilisateur valide
  *   - `created_by: user.id` : lié à l'utilisateur (RLS vérifie ça pour les lectures)
  *   - XP rewards : scaled selon la difficulté (easy=50, legendary=800)
@@ -40,17 +38,6 @@ export async function createCustomQuestAction(input: z.infer<typeof Schema>) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-
-  // Vérification d'entitlement : a-t-il payé pour débloquer les quêtes perso ?
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('has_custom_quests')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.has_custom_quests) {
-    return { error: 'Quêtes personnalisées non débloquées' };
-  }
 
   // XP reward scales with difficulty
   const xpRewards = { easy: 50, medium: 100, hard: 200, expert: 400, legendary: 800 };
